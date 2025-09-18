@@ -37,7 +37,6 @@
   <div>
     <button id="checkBtn">Comprobar</button>
     <button id="revealBtn">Mostrar solución</button>
-    <button id="nextBtn">Siguiente</button>
   </div>
   <div class="msg" id="message"></div>
 
@@ -53,7 +52,6 @@
   ];
 
   let edgeIndex = 0;
-  let solved = false;
 
   const startBox = document.getElementById('startBox');
   const endBox   = document.getElementById('endBox');
@@ -78,7 +76,6 @@
     renderEndpoint(endBox,NODES[edgeIndex+1]);
     middleInput.value='';
     msgEl.textContent='';msgEl.className='msg';
-    solved = false;
   }
 
   function normalize(s){return (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
@@ -88,33 +85,28 @@
     if(!val){showMsg('Escribe algo.','warn');return;}
     if(ANSWERS[edgeIndex].map(normalize).includes(val)){
       showMsg('¡Correcto! 🎉','ok');
-      solved = true;
+      setTimeout(()=>{
+        edgeIndex=(edgeIndex+1)%(NODES.length-1);
+        loadStep();
+      },1000);
     } else {
       showMsg('No es correcto.','bad');
-      solved = false;
     }
   }
 
   function reveal(){
     middleInput.value=ANSWERS[edgeIndex][0]||'';
     showMsg('Solución mostrada.','warn');
-    solved = true;
-  }
-
-  function next(){
-    if(!solved){
-      showMsg('Debes resolver este paso antes de continuar.','warn');
-      return;
-    }
-    edgeIndex=(edgeIndex+1)%(NODES.length-1);
-    loadStep();
+    setTimeout(()=>{
+      edgeIndex=(edgeIndex+1)%(NODES.length-1);
+      loadStep();
+    },1500);
   }
 
   function showMsg(t,k){msgEl.textContent=t;msgEl.className='msg '+k;}
 
   document.getElementById('checkBtn').onclick=check;
   document.getElementById('revealBtn').onclick=reveal;
-  document.getElementById('nextBtn').onclick=next;
   middleInput.addEventListener('keydown',e=>{if(e.key==='Enter')check();});
 
   loadStep();
