@@ -5,42 +5,90 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Asocia — Cadena</title>
   <style>
-    body{
-      margin:0;
-      font-family:system-ui;
-      background:#0b0f14;
-      color:#e9eef7;
-      display:flex;
-      flex-direction:column;
-      align-items:center;
-      justify-content:center;
-      min-height:100vh;
-      text-align:center;
-    }
-    header{padding:24px;font-weight:bold;font-size:2rem}
-    .row{display:flex;align-items:center;justify-content:center;gap:24px;margin:40px 0}
-    .box{min-width:200px;min-height:140px;padding:20px;border-radius:16px;border:3px solid #2a3648;display:flex;align-items:center;justify-content:center;text-align:center;font-size:2rem}
+    :root{--bg:#0b0f14;--text:#e9eef7;--accent:#4f9cff;--muted:#a7b0be;--ok:#2ecc71;--bad:#ff5a5a;--warn:#f0c94b}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center}
+    header{position:fixed;top:0;left:0;right:0;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;background:rgba(11,15,20,.6);backdrop-filter:blur(8px);border-bottom:1px solid #1a2330}
+    .brand{font-weight:800;font-size:1.3rem}
+    .userbar{display:flex;gap:12px;align-items:center;font-size:.95rem;color:var(--muted)}
+    .pill{border:1px solid #2a3648;border-radius:999px;padding:6px 10px}
+    main{padding-top:84px}
+    .row{display:flex;align-items:center;justify-content:center;gap:24px;margin:24px 0}
+    .box{min-width:220px;min-height:150px;padding:20px;border-radius:16px;border:3px solid #2a3648;display:flex;align-items:center;justify-content:center;text-align:center;font-size:2rem}
     .box strong{font-size:2rem}
     .box input{all:unset;width:100%;height:100%;text-align:center;font-size:2rem}
-    button{all:unset;cursor:pointer;background:#4f9cff;color:#0b0f14;padding:16px 28px;border-radius:12px;font-weight:700;margin:12px;font-size:1.2rem}
-    .msg{margin-top:20px;font-size:1.2rem}
-    .ok{color:#2ecc71}.bad{color:#ff5a5a}.warn{color:#f0c94b}
+    button{all:unset;cursor:pointer;background:var(--accent);color:#0b0f14;padding:14px 24px;border-radius:12px;font-weight:700;margin:8px;font-size:1.1rem}
+    .secondary{background:#162232;color:var(--text);border:1px solid #29384f}
+    .msg{margin-top:16px;font-size:1.1rem}
+    .ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+    .stack{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
+
+    /* Modal usuario */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px}
+    .card{background:#10161d;border:1px solid #1a2330;border-radius:16px;max-width:520px;width:100%;padding:20px;text-align:left}
+    .card h2{margin:0 0 6px;font-size:1.4rem}
+    .field{display:flex;gap:10px;margin-top:10px}
+    .field input{flex:1;all:unset;background:#0f1620;border:1px solid #243246;border-radius:10px;padding:12px 14px;font-size:1rem}
+    .helper{color:var(--muted);font-size:.9rem;margin-top:6px}
+
+    /* Leaderboard */
+    .board{margin-top:28px;font-size:.95rem;color:var(--muted)}
+    .board table{width:100%;border-collapse:collapse;margin-top:8px}
+    .board th,.board td{padding:8px;border-bottom:1px solid #1a2330;text-align:left}
   </style>
 </head>
 <body>
-  <header>🔗 Juego de Asociaciones</header>
-  <div class="row" id="gameRow">
-    <div class="box" id="startBox"></div>
-    <div class="box"><input id="middleInput" placeholder="Escribe conexión…"/></div>
-    <div class="box" id="endBox"></div>
+  <header>
+    <div class="brand">🔗 Asocia</div>
+    <div class="userbar">
+      <span class="pill" id="userTag">Sin usuario</span>
+      <span class="pill">⭐ <span id="scoreTag">0</span></span>
+      <button class="secondary" id="switchBtn">Cambiar usuario</button>
+    </div>
+  </header>
+
+  <main>
+    <h1 style="margin:0 0 8px">Juego de Asociaciones</h1>
+    <div class="stack" style="color:var(--muted);margin-bottom:14px">Escribe una palabra en la caja central que conecte el inicio con el fin.</div>
+
+    <div class="row" id="gameRow">
+      <div class="box" id="startBox"></div>
+      <div class="box"><input id="middleInput" placeholder="Escribe conexión…"/></div>
+      <div class="box" id="endBox"></div>
+    </div>
+
+    <div class="stack">
+      <button id="checkBtn">Comprobar</button>
+      <button id="revealBtn" class="secondary">Mostrar solución</button>
+    </div>
+
+    <div class="msg" id="message"></div>
+
+    <section class="board" id="leaderboard">
+      <div style="font-weight:700">Top jugadores</div>
+      <table>
+        <thead><tr><th>Usuario</th><th>Puntuación</th></tr></thead>
+        <tbody id="boardBody"></tbody>
+      </table>
+    </section>
+  </main>
+
+  <!-- Modal de usuario -->
+  <div class="modal" id="userModal" style="display:none">
+    <div class="card">
+      <h2>Crea tu usuario</h2>
+      <div class="helper">El nombre debe ser único. No se distingue entre mayúsculas/minúsculas.</div>
+      <div class="field">
+        <input id="userInput" placeholder="Tu nombre de usuario" maxlength="24" />
+        <button id="createUserBtn">Crear</button>
+      </div>
+      <div id="userError" class="msg bad" style="min-height:24px"></div>
+      <div class="helper">¿Ya tienes uno? Escríbelo igual y pulsa <em>Crear</em> para iniciar sesión.</div>
+    </div>
   </div>
-  <div id="buttons">
-    <button id="checkBtn">Comprobar</button>
-    <button id="revealBtn">Mostrar solución</button>
-  </div>
-  <div class="msg" id="message"></div>
 
 <script>
+  // === Config del juego ===
   const NODES = [
     { type:'text', value:'GATO' },
     { type:'text', value:'RATÓN' },
@@ -51,24 +99,108 @@
     ['alimento','comida','lacteo']
   ];
 
-  let edgeIndex = 0;
+  // === Estado de juego ===
+  let edgeIndex = 0; // paso actual
+  let attemptsThisStep = 0;
 
+  // === DOM ===
   const startBox = document.getElementById('startBox');
   const endBox   = document.getElementById('endBox');
   const middleInput = document.getElementById('middleInput');
   const msgEl = document.getElementById('message');
+  const userTag = document.getElementById('userTag');
+  const scoreTag = document.getElementById('scoreTag');
+  const switchBtn = document.getElementById('switchBtn');
+  const modal = document.getElementById('userModal');
+  const userInput = document.getElementById('userInput');
+  const createUserBtn = document.getElementById('createUserBtn');
+  const userError = document.getElementById('userError');
+  const boardBody = document.getElementById('boardBody');
   const gameRow = document.getElementById('gameRow');
-  const buttons = document.getElementById('buttons');
 
+  // === Utilidades de usuarios/score (localStorage) ===
+  const LS_KEYS = {
+    users: 'asocia_users',        // array de usernames canon (lower)
+    data:  'asocia_user_data',    // mapa lower -> {display, score, created}
+    current: 'asocia_current_user'
+  };
+
+  function readJSON(key, fallback){
+    try{ return JSON.parse(localStorage.getItem(key)) ?? fallback }catch{ return fallback }
+  }
+  function writeJSON(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+  function toCanon(name){ return (name||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
+
+  function getUsers(){ return readJSON(LS_KEYS.users, []); }
+  function getData(){ return readJSON(LS_KEYS.data, {}); }
+  function setUsers(arr){ writeJSON(LS_KEYS.users, arr); }
+  function setData(map){ writeJSON(LS_KEYS.data, map); }
+
+  function getCurrent(){ return localStorage.getItem(LS_KEYS.current) || null; }
+  function setCurrent(canon){ if(canon) localStorage.setItem(LS_KEYS.current, canon); }
+  function clearCurrent(){ localStorage.removeItem(LS_KEYS.current); }
+
+  function ensureUser(name){
+    const canon = toCanon(name);
+    if(!canon) return {ok:false, reason:'El nombre no puede estar vacío.'};
+    const users = getUsers();
+    const data = getData();
+    if(users.includes(canon)){
+      // Iniciar sesión
+      setCurrent(canon);
+      return {ok:true, created:false, canon, display:data[canon].display};
+    } else {
+      // Crear si no existe
+      users.push(canon); setUsers(users);
+      data[canon] = { display:name.trim(), score:0, created: Date.now() };
+      setData(data);
+      setCurrent(canon);
+      return {ok:true, created:true, canon, display:name.trim()};
+    }
+  }
+
+  function currentDisplay(){
+    const canon = getCurrent();
+    if(!canon) return null;
+    const data = getData();
+    return data[canon]?.display || null;
+  }
+  function currentScore(){
+    const canon = getCurrent();
+    if(!canon) return 0;
+    return getData()[canon]?.score ?? 0;
+  }
+  function addScore(delta){
+    const canon = getCurrent(); if(!canon) return;
+    const data = getData();
+    data[canon].score = (data[canon].score||0) + delta;
+    setData(data);
+    updateUserBar();
+    renderBoard();
+  }
+
+  function updateUserBar(){
+    const disp = currentDisplay();
+    userTag.textContent = disp ? disp : 'Sin usuario';
+    scoreTag.textContent = String(currentScore());
+  }
+
+  function renderBoard(){
+    const data = getData();
+    const arr = Object.values(data).map(d=>({display:d.display, score:d.score})).sort((a,b)=>b.score-a.score).slice(0,8);
+    boardBody.innerHTML = arr.map(r=>`<tr><td>${r.display}</td><td>${r.score}</td></tr>`).join('') || '<tr><td colspan="2">Aún no hay puntuaciones</td></tr>';
+  }
+
+  // === Juego ===
   function renderEndpoint(el, node){
     el.innerHTML = '';
     if(node.type==='text'){
       const span=document.createElement('strong');
-      span.textContent=node.value;
-      el.appendChild(span);
+      span.textContent=node.value; el.appendChild(span);
     } else if(node.type==='image'){
       const img=document.createElement('img');
-      img.src=node.src;img.alt=node.alt||'Imagen';img.style.maxWidth='100%';img.style.maxHeight='100px';
+      img.src=node.src; img.alt=node.alt||'Imagen'; img.style.maxWidth='100%'; img.style.maxHeight='100px';
       el.appendChild(img);
     }
   }
@@ -77,23 +209,30 @@
     renderEndpoint(startBox,NODES[edgeIndex]);
     renderEndpoint(endBox,NODES[edgeIndex+1]);
     middleInput.value='';
-    msgEl.textContent='';msgEl.className='msg';
+    msgEl.textContent=''; msgEl.className='msg';
+    attemptsThisStep = 0;
+    middleInput.focus();
   }
 
   function normalize(s){return (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
 
+  function correctPoints(){
+    // 100 si es al primer intento, 50 si no; 0 si se revela
+    return attemptsThisStep === 0 ? 100 : 50;
+  }
+
   function check(){
     const val=normalize(middleInput.value);
     if(!val){showMsg('Escribe algo.','warn');return;}
-    if(ANSWERS[edgeIndex].map(normalize).includes(val)){
+    attemptsThisStep++;
+    if((ANSWERS[edgeIndex]||[]).map(normalize).includes(val)){
+      const pts = correctPoints();
+      addScore(pts);
       if(edgeIndex < NODES.length-2){
-        showMsg('¡Correcto! 🎉','ok');
-        setTimeout(()=>{
-          edgeIndex++;
-          loadStep();
-        },1000);
+        showMsg(`¡Correcto! +${pts} puntos 🎉`, 'ok');
+        setTimeout(()=>{ edgeIndex++; loadStep(); }, 900);
       } else {
-        showMsg('🎉 ¡Has completado toda la cadena!','ok');
+        showMsg(`🎉 ¡Cadena completa! Total +${pts} puntos`, 'ok');
         endGame();
       }
     } else {
@@ -102,31 +241,52 @@
   }
 
   function reveal(){
-    middleInput.value=ANSWERS[edgeIndex][0]||'';
+    middleInput.value=(ANSWERS[edgeIndex]||[])[0]||'';
     if(edgeIndex < NODES.length-2){
-      showMsg('Solución mostrada.','warn');
-      setTimeout(()=>{
-        edgeIndex++;
-        loadStep();
-      },1500);
+      showMsg('Solución mostrada (0 puntos).', 'warn');
+      setTimeout(()=>{ edgeIndex++; loadStep(); }, 900);
     } else {
-      showMsg('🎉 ¡Has completado toda la cadena!','ok');
+      showMsg('Solución mostrada (0 puntos). 🎉 Cadena completa', 'warn');
       endGame();
     }
   }
 
   function endGame(){
     gameRow.style.display='none';
-    buttons.style.display='none';
+    document.getElementById('checkBtn').style.display='none';
+    document.getElementById('revealBtn').style.display='none';
   }
 
-  function showMsg(t,k){msgEl.textContent=t;msgEl.className='msg '+k;}
+  function showMsg(t,k){ msgEl.textContent=t; msgEl.className='msg '+k; }
 
+  // === Eventos ===
   document.getElementById('checkBtn').onclick=check;
   document.getElementById('revealBtn').onclick=reveal;
-  middleInput.addEventListener('keydown',e=>{if(e.key==='Enter')check();});
+  middleInput.addEventListener('keydown',e=>{ if(e.key==='Enter') check(); });
 
-  loadStep();
+  switchBtn.onclick = ()=>{ clearCurrent(); askUser(); };
+  createUserBtn.onclick = ()=>{
+    const res = ensureUser(userInput.value);
+    if(res.ok){ closeModal(); updateUserBar(); renderBoard(); loadStep(); }
+    else { userError.textContent = res.reason || 'Nombre inválido'; }
+  };
+
+  function openModal(){ modal.style.display='flex'; setTimeout(()=>userInput.focus(), 0); }
+  function closeModal(){ modal.style.display='none'; userInput.value=''; userError.textContent=''; }
+
+  function askUser(){
+    updateUserBar(); renderBoard();
+    if(!getCurrent()){ openModal(); }
+  }
+
+  // === Inicio ===
+  updateUserBar();
+  renderBoard();
+  if(!getCurrent()){
+    openModal();
+  } else {
+    loadStep();
+  }
 </script>
 </body>
 </html>
