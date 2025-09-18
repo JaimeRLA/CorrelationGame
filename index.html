@@ -3,32 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Asocia — Juego tipo Wordle</title>
+  <title>Asocia — Input intermedio</title>
   <style>
     :root{
       --bg:#0b0f14; --card:#10161d; --muted:#a7b0be; --text:#e9eef7; --accent:#4f9cff; --ok:#2ecc71; --bad:#ff5a5a; --warn:#f0c94b;
       --radius:18px;
     }
     *{box-sizing:border-box}
-    body{margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji"; background:linear-gradient(180deg,#0b0f14, #0d141d); color:var(--text);}
+    body{margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; background:linear-gradient(180deg,#0b0f14, #0d141d); color:var(--text);}
     header{padding:20px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid #1d2633}
     .brand{display:flex; align-items:center; gap:10px}
     .logo{width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--accent),#7aaeff); display:grid; place-items:center; font-weight:800; color:#0b0f14}
     .title{font-size:18px; font-weight:700}
     main{max-width:920px; margin:0 auto; padding:24px 16px 48px}
     .card{background:var(--card); border:1px solid #1a2330; border-radius:var(--radius); padding:18px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    .row{display:grid; grid-template-columns:1fr auto 1fr; gap:14px; align-items:center}
+    .row{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; align-items:stretch}
     .col{display:flex; flex-direction:column; gap:8px}
     .pill{font-size:12px; letter-spacing:.3px; color:var(--muted)}
     .box{min-height:110px; border-radius:16px; border:1.5px dashed #2a3648; background:#0f1620; display:flex; align-items:center; justify-content:center; padding:12px; text-align:center}
     .box strong{font-size:22px;}
     .box img{max-width:100%; max-height:100px; object-fit:contain; border-radius:12px}
-    .arrow{font-size:22px; color:#6f7b8d}
-
-    .input-area{margin-top:20px; display:flex; gap:10px; justify-content:center}
-    .chip{background:#121a25; border:1px solid #243246; border-radius:12px; padding:10px 12px; width:240px; display:flex; gap:8px; align-items:center}
-    .chip input{all:unset; flex:1; font-size:14px}
-    .chip .idx{opacity:.6; font-size:12px}
 
     .actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap}
     button{all:unset; background:var(--accent); color:#08101a; padding:12px 16px; border-radius:12px; font-weight:700; cursor:pointer}
@@ -39,16 +33,11 @@
     .msg.bad{color:var(--bad)}
     .msg.warn{color:var(--warn)}
 
-    .toolbar{display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap}
     .level-info{display:flex; gap:10px; align-items:center; color:var(--muted)}
     .badge{background:#121a25; border:1px solid #233145; padding:6px 10px; border-radius:999px; font-size:12px}
 
-    footer{opacity:.7; font-size:12px; margin-top:24px; text-align:center}
-    .separator{height:1px; background:#1a2330; margin:18px 0}
-
     @media (max-width:640px){
       .row{grid-template-columns:1fr}
-      .arrow{display:none}
     }
   </style>
 </head>
@@ -56,61 +45,50 @@
   <header>
     <div class="brand"><div class="logo">A</div><div class="title">Asocia</div></div>
     <div class="level-info">
-      <span class="badge" id="progress">Nivel 1 / 1</span>
+      <span class="badge" id="progress">Paso 1 / 2</span>
       <span class="badge" id="attempts">Intentos: 0</span>
     </div>
   </header>
   <main>
     <section class="card">
-      <div class="toolbar">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:10px; flex-wrap:wrap">
         <div>
-          <div style="font-weight:700; font-size:18px">Conecta paso a paso</div>
-          <div style="color:var(--muted); font-size:13px">Rellena la caja intermedia. La respuesta pasa a ser el nuevo inicio en el siguiente nivel.</div>
+          <div style="font-weight:700; font-size:18px">Conecta las ideas</div>
+          <div style="color:var(--muted); font-size:13px">Escribe una palabra en la caja central que conecte el inicio con el fin.</div>
         </div>
         <div class="actions">
           <button id="checkBtn">Comprobar</button>
           <button class="secondary" id="revealBtn">Mostrar solución</button>
-          <button class="ghost" id="nextBtn">Siguiente nivel →</button>
+          <button class="ghost" id="nextBtn">Siguiente →</button>
         </div>
       </div>
 
-      <div class="row" id="gameRow">
+      <div class="row">
         <div class="col">
           <span class="pill">Inicio</span>
           <div class="box" id="startBox"></div>
         </div>
-        <div class="arrow">▶</div>
+        <div class="col">
+          <span class="pill">Conexión</span>
+          <div class="box" style="padding:0;display:flex;align-items:stretch">
+            <input id="midInput" placeholder="Escribe la palabra que conecta…" style="all:unset;flex:1;padding:14px 16px; font-size:16px;" spellcheck="false" />
+          </div>
+        </div>
         <div class="col">
           <span class="pill">Fin</span>
           <div class="box" id="endBox"></div>
         </div>
       </div>
 
-      <div class="separator"></div>
-
-      <div class="input-area" id="inputArea"></div>
-      <div class="msg" id="message"></div>
+      <div class="msg" id="message" style="min-height:20px;margin-top:12px"></div>
     </section>
-
-    <footer>
-      <p>💡 Consejo: la palabra que completes será el inicio del próximo nivel.</p>
-    </footer>
   </main>
 
   <script>
     // ==============================
     //   CONFIGURACIÓN (CADENA LINEAL)
     // ==============================
-    /**
-     * Ahora el juego funciona como una **cadena** de correlaciones:
-     * NODES = [A, B, C, D, ...]
-     * El jugador rellena **una sola** palabra que conecta A → B.
-     * Si acierta, el juego avanza y la **caja de fin** pasa a ser la **caja de inicio**
-     * para el siguiente paso (B → C), y así sucesivamente.
-     * 
-     * - NODES: extremos (texto o imagen) en orden.
-     * - ANSWERS[i]: lista de respuestas válidas para conectar NODES[i] con NODES[i+1].
-     */
+    // Edita NODES y ANSWERS a tu gusto.
     const NODES = [
       { type: 'text', value: 'GATO' },
       { type: 'text', value: 'RATÓN' },
@@ -118,8 +96,8 @@
     ];
 
     const ANSWERS = [
-      ['depredador','cazador','caza'], // conecta GATO → RATÓN
-      ['alimento','comida','lacteo']   // conecta RATÓN → QUESO
+      ['depredador','cazador','caza'], // GATO → RATÓN
+      ['alimento','comida','lacteo']   // RATÓN → QUESO
     ];
 
     // ==============================
@@ -127,15 +105,15 @@
     // ==============================
     const startBox = document.getElementById('startBox');
     const endBox   = document.getElementById('endBox');
-    const inputsEl = document.getElementById('inputs');
     const msgEl    = document.getElementById('message');
+    const midInput = document.getElementById('midInput');
+
     const checkBtn = document.getElementById('checkBtn');
     const revealBtn= document.getElementById('revealBtn');
     const nextBtn  = document.getElementById('nextBtn');
     const attemptsBadge = document.getElementById('attempts');
     const progressBadge = document.getElementById('progress');
 
-    // Índice del **paso** actual (arista i = NODES[i] → NODES[i+1])
     let edgeIndex = Number(localStorage.getItem('asocia_edge')||0);
     if(edgeIndex >= NODES.length-1) edgeIndex = 0;
     let attempts = 0;
@@ -154,24 +132,8 @@
       }
     }
 
-    function renderSingleInput(){
-      inputsEl.innerHTML = '';
-      const chip = document.createElement('div');
-      chip.className = 'chip';
-      const idx = document.createElement('span');
-      idx.className = 'idx';
-      idx.textContent = '#1';
-      const input = document.createElement('input');
-      input.placeholder = 'Escribe la conexión…';
-      input.autocapitalize = 'off';
-      input.spellcheck = false;
-      chip.appendChild(idx);
-      chip.appendChild(input);
-      inputsEl.appendChild(chip);
-    }
-
     function normalize(str){
-      return (str||'').toString().trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+      return (str||'').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
     }
 
     function currentAccepted(){
@@ -179,7 +141,7 @@
     }
 
     function checkAnswers(){
-      const value = normalize(inputsEl.querySelector('input')?.value || '');
+      const value = normalize(midInput.value || '');
       attempts++; attemptsBadge.textContent = `Intentos: ${attempts}`;
       if(!value){ showMsg('Escribe la palabra intermedia antes de comprobar.','warn'); return; }
       const ok = currentAccepted().includes(value);
@@ -193,9 +155,8 @@
 
     function reveal(){
       const accepted = currentAccepted();
-      const input = inputsEl.querySelector('input');
-      if(input && accepted.length){ input.value = accepted[0]; }
-      showMsg('Solución rellenada. Pulsa "Siguiente nivel" para continuar.', 'warn');
+      if(accepted.length){ midInput.value = accepted[0]; }
+      showMsg('Solución rellenada. Pulsa "Siguiente" para continuar.', 'warn');
     }
 
     function saveProgress(){
@@ -207,16 +168,16 @@
       progressBadge.textContent = `Paso ${edgeIndex+1} / ${NODES.length-1}`;
       renderEndpoint(startBox, NODES[edgeIndex]);
       renderEndpoint(endBox,   NODES[edgeIndex+1]);
-      renderSingleInput();
+      midInput.value = '';
       msgEl.textContent = '';
       msgEl.className = 'msg';
+      setTimeout(()=> midInput.focus(), 0);
     }
 
     function nextStep(){
       edgeIndex = (edgeIndex + 1);
       if(edgeIndex >= NODES.length-1){
-        // Fin de la cadena → reinicia
-        edgeIndex = 0;
+        edgeIndex = 0; // reinicia cadena
         showMsg('¡Cadena completada! 🔁 Empezamos de nuevo.', 'ok');
       }
       saveProgress();
@@ -232,7 +193,7 @@
     checkBtn.addEventListener('click', checkAnswers);
     revealBtn.addEventListener('click', reveal);
     nextBtn.addEventListener('click', nextStep);
-    inputsEl.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') checkAnswers(); });
+    midInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') checkAnswers(); });
 
     // Inicializar
     loadStep();
