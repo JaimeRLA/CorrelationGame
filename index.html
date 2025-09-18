@@ -3,200 +3,110 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Asocia — Input intermedio</title>
+  <title>Asocia — Cadena</title>
   <style>
-    :root{
-      --bg:#0b0f14; --card:#10161d; --muted:#a7b0be; --text:#e9eef7; --accent:#4f9cff; --ok:#2ecc71; --bad:#ff5a5a; --warn:#f0c94b;
-      --radius:18px;
-    }
-    *{box-sizing:border-box}
-    body{margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial; background:linear-gradient(180deg,#0b0f14, #0d141d); color:var(--text);}
-    header{padding:20px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid #1d2633}
-    .brand{display:flex; align-items:center; gap:10px}
-    .logo{width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--accent),#7aaeff); display:grid; place-items:center; font-weight:800; color:#0b0f14}
-    .title{font-size:18px; font-weight:700}
-    main{max-width:920px; margin:0 auto; padding:24px 16px 48px}
-    .card{background:var(--card); border:1px solid #1a2330; border-radius:var(--radius); padding:18px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
-    .row{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; align-items:stretch}
-    .col{display:flex; flex-direction:column; gap:8px}
-    .pill{font-size:12px; letter-spacing:.3px; color:var(--muted)}
-    .box{min-height:110px; border-radius:16px; border:1.5px dashed #2a3648; background:#0f1620; display:flex; align-items:center; justify-content:center; padding:12px; text-align:center}
-    .box strong{font-size:22px;}
-    .box img{max-width:100%; max-height:100px; object-fit:contain; border-radius:12px}
-
-    .actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap}
-    button{all:unset; background:var(--accent); color:#08101a; padding:12px 16px; border-radius:12px; font-weight:700; cursor:pointer}
-    button.secondary{background:#162232; color:var(--text); border:1px solid #29384f}
-    button.ghost{background:transparent; color:var(--muted)}
-    .msg{margin-top:10px; font-size:14px}
-    .msg.ok{color:var(--ok)}
-    .msg.bad{color:var(--bad)}
-    .msg.warn{color:var(--warn)}
-
-    .level-info{display:flex; gap:10px; align-items:center; color:var(--muted)}
-    .badge{background:#121a25; border:1px solid #233145; padding:6px 10px; border-radius:999px; font-size:12px}
-
-    @media (max-width:640px){
-      .row{grid-template-columns:1fr}
-    }
+    body{margin:0;font-family:system-ui;background:#0b0f14;color:#e9eef7;display:flex;flex-direction:column;align-items:center;min-height:100vh}
+    header{padding:16px;font-weight:bold}
+    .row{display:flex;align-items:center;gap:12px;margin:20px 0}
+    .box{min-width:120px;min-height:80px;padding:12px;border-radius:12px;border:2px solid #2a3648;display:flex;align-items:center;justify-content:center;text-align:center}
+    .box strong{font-size:20px}
+    .box input{all:unset;width:100%;height:100%;text-align:center;font-size:18px}
+    button{all:unset;cursor:pointer;background:#4f9cff;color:#0b0f14;padding:10px 16px;border-radius:10px;font-weight:600;margin:8px}
+    .msg{margin-top:10px;font-size:14px}
+    .ok{color:#2ecc71}.bad{color:#ff5a5a}.warn{color:#f0c94b}
   </style>
 </head>
 <body>
-  <header>
-    <div class="brand"><div class="logo">A</div><div class="title">Asocia</div></div>
-    <div class="level-info">
-      <span class="badge" id="progress">Paso 1 / 2</span>
-      <span class="badge" id="attempts">Intentos: 0</span>
-    </div>
-  </header>
-  <main>
-    <section class="card">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:10px; flex-wrap:wrap">
-        <div>
-          <div style="font-weight:700; font-size:18px">Conecta las ideas</div>
-          <div style="color:var(--muted); font-size:13px">Escribe una palabra en la caja central que conecte el inicio con el fin.</div>
-        </div>
-        <div class="actions">
-          <button id="checkBtn">Comprobar</button>
-          <button class="secondary" id="revealBtn">Mostrar solución</button>
-          <button class="ghost" id="nextBtn">Siguiente →</button>
-        </div>
-      </div>
+  <header>🔗 Juego de Asociaciones</header>
+  <div class="row">
+    <div class="box" id="startBox"></div>
+    <div class="box"><input id="middleInput" placeholder="Escribe conexión…"/></div>
+    <div class="box" id="endBox"></div>
+  </div>
+  <div>
+    <button id="checkBtn">Comprobar</button>
+    <button id="revealBtn">Mostrar solución</button>
+    <button id="nextBtn">Siguiente</button>
+  </div>
+  <div class="msg" id="message"></div>
 
-      <div class="row">
-        <div class="col">
-          <span class="pill">Inicio</span>
-          <div class="box" id="startBox"></div>
-        </div>
-        <div class="col">
-          <span class="pill">Conexión</span>
-          <div class="box" style="padding:0;display:flex;align-items:stretch">
-            <input id="midInput" placeholder="Escribe la palabra que conecta…" style="all:unset;flex:1;padding:14px 16px; font-size:16px;" spellcheck="false" />
-          </div>
-        </div>
-        <div class="col">
-          <span class="pill">Fin</span>
-          <div class="box" id="endBox"></div>
-        </div>
-      </div>
+<script>
+  const NODES = [
+    { type:'text', value:'GATO' },
+    { type:'text', value:'RATÓN' },
+    { type:'text', value:'QUESO' }
+  ];
+  const ANSWERS = [
+    ['depredador','cazador','caza'],
+    ['alimento','comida','lacteo']
+  ];
 
-      <div class="msg" id="message" style="min-height:20px;margin-top:12px"></div>
-    </section>
-  </main>
+  let edgeIndex = 0;
+  let solved = false;
 
-  <script>
-    // ==============================
-    //   CONFIGURACIÓN (CADENA LINEAL)
-    // ==============================
-    // Edita NODES y ANSWERS a tu gusto.
-    const NODES = [
-      { type: 'text', value: 'GATO' },
-      { type: 'text', value: 'RATÓN' },
-      { type: 'text', value: 'QUESO' }
-    ];
+  const startBox = document.getElementById('startBox');
+  const endBox   = document.getElementById('endBox');
+  const middleInput = document.getElementById('middleInput');
+  const msgEl = document.getElementById('message');
 
-    const ANSWERS = [
-      ['depredador','cazador','caza'], // GATO → RATÓN
-      ['alimento','comida','lacteo']   // RATÓN → QUESO
-    ];
-
-    // ==============================
-    //             UI
-    // ==============================
-    const startBox = document.getElementById('startBox');
-    const endBox   = document.getElementById('endBox');
-    const msgEl    = document.getElementById('message');
-    const midInput = document.getElementById('midInput');
-
-    const checkBtn = document.getElementById('checkBtn');
-    const revealBtn= document.getElementById('revealBtn');
-    const nextBtn  = document.getElementById('nextBtn');
-    const attemptsBadge = document.getElementById('attempts');
-    const progressBadge = document.getElementById('progress');
-
-    let edgeIndex = Number(localStorage.getItem('asocia_edge')||0);
-    if(edgeIndex >= NODES.length-1) edgeIndex = 0;
-    let attempts = 0;
-
-    function renderEndpoint(container, data){
-      container.innerHTML = '';
-      if(data.type === 'text'){
-        const span = document.createElement('strong');
-        span.textContent = data.value;
-        container.appendChild(span);
-      } else if (data.type === 'image'){
-        const img = document.createElement('img');
-        img.src = data.src;
-        img.alt = data.alt || 'Imagen';
-        container.appendChild(img);
-      }
+  function renderEndpoint(el, node){
+    el.innerHTML = '';
+    if(node.type==='text'){
+      const span=document.createElement('strong');
+      span.textContent=node.value;
+      el.appendChild(span);
+    } else if(node.type==='image'){
+      const img=document.createElement('img');
+      img.src=node.src;img.alt=node.alt||'Imagen';img.style.maxWidth='100%';img.style.maxHeight='60px';
+      el.appendChild(img);
     }
+  }
 
-    function normalize(str){
-      return (str||'').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  function loadStep(){
+    renderEndpoint(startBox,NODES[edgeIndex]);
+    renderEndpoint(endBox,NODES[edgeIndex+1]);
+    middleInput.value='';
+    msgEl.textContent='';msgEl.className='msg';
+    solved = false;
+  }
+
+  function normalize(s){return (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
+
+  function check(){
+    const val=normalize(middleInput.value);
+    if(!val){showMsg('Escribe algo.','warn');return;}
+    if(ANSWERS[edgeIndex].map(normalize).includes(val)){
+      showMsg('¡Correcto! 🎉','ok');
+      solved = true;
+    } else {
+      showMsg('No es correcto.','bad');
+      solved = false;
     }
+  }
 
-    function currentAccepted(){
-      return (ANSWERS[edgeIndex]||[]).map(normalize);
+  function reveal(){
+    middleInput.value=ANSWERS[edgeIndex][0]||'';
+    showMsg('Solución mostrada.','warn');
+    solved = true;
+  }
+
+  function next(){
+    if(!solved){
+      showMsg('Debes resolver este paso antes de continuar.','warn');
+      return;
     }
-
-    function checkAnswers(){
-      const value = normalize(midInput.value || '');
-      attempts++; attemptsBadge.textContent = `Intentos: ${attempts}`;
-      if(!value){ showMsg('Escribe la palabra intermedia antes de comprobar.','warn'); return; }
-      const ok = currentAccepted().includes(value);
-      if(ok){
-        showMsg('¡Correcto! 🎉 Avanzamos al siguiente par.', 'ok');
-        nextStep();
-      } else {
-        showMsg('Aún no. Prueba con otra palabra 😉', 'bad');
-      }
-    }
-
-    function reveal(){
-      const accepted = currentAccepted();
-      if(accepted.length){ midInput.value = accepted[0]; }
-      showMsg('Solución rellenada. Pulsa "Siguiente" para continuar.', 'warn');
-    }
-
-    function saveProgress(){
-      localStorage.setItem('asocia_edge', String(edgeIndex));
-    }
-
-    function loadStep(){
-      attempts = 0; attemptsBadge.textContent = `Intentos: ${attempts}`;
-      progressBadge.textContent = `Paso ${edgeIndex+1} / ${NODES.length-1}`;
-      renderEndpoint(startBox, NODES[edgeIndex]);
-      renderEndpoint(endBox,   NODES[edgeIndex+1]);
-      midInput.value = '';
-      msgEl.textContent = '';
-      msgEl.className = 'msg';
-      setTimeout(()=> midInput.focus(), 0);
-    }
-
-    function nextStep(){
-      edgeIndex = (edgeIndex + 1);
-      if(edgeIndex >= NODES.length-1){
-        edgeIndex = 0; // reinicia cadena
-        showMsg('¡Cadena completada! 🔁 Empezamos de nuevo.', 'ok');
-      }
-      saveProgress();
-      loadStep();
-    }
-
-    function showMsg(text, kind){
-      msgEl.textContent = text;
-      msgEl.className = `msg ${kind||''}`;
-    }
-
-    // Eventos
-    checkBtn.addEventListener('click', checkAnswers);
-    revealBtn.addEventListener('click', reveal);
-    nextBtn.addEventListener('click', nextStep);
-    midInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') checkAnswers(); });
-
-    // Inicializar
+    edgeIndex=(edgeIndex+1)%(NODES.length-1);
     loadStep();
-  </script>
+  }
+
+  function showMsg(t,k){msgEl.textContent=t;msgEl.className='msg '+k;}
+
+  document.getElementById('checkBtn').onclick=check;
+  document.getElementById('revealBtn').onclick=reveal;
+  document.getElementById('nextBtn').onclick=next;
+  middleInput.addEventListener('keydown',e=>{if(e.key==='Enter')check();});
+
+  loadStep();
+</script>
 </body>
 </html>
