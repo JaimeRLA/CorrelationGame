@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Asocia — Cadena</title>
+  <title>Asocia — Cadena (Firebase)</title>
   <style>
     :root{--bg:#0b0f14;--text:#e9eef7;--accent:#4f9cff;--muted:#a7b0be;--ok:#2ecc71;--bad:#ff5a5a;--warn:#f0c94b}
     *{box-sizing:border-box}
@@ -24,7 +24,7 @@
     .stack{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
 
     /* Modal usuario */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:20px}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px}
     .card{background:#10161d;border:1px solid #1a2330;border-radius:16px;max-width:520px;width:100%;padding:20px;text-align:left}
     .card h2{margin:0 0 6px;font-size:1.4rem}
     .field{display:flex;gap:10px;margin-top:10px}
@@ -74,7 +74,7 @@
   </main>
 
   <!-- Modal de usuario -->
-  <div class="modal" id="userModal" style="display:none">
+  <div class="modal" id="userModal">
     <div class="card">
       <h2>Crea tu usuario</h2>
       <div class="helper">El nombre debe ser único. No se distingue entre mayúsculas/minúsculas.</div>
@@ -83,9 +83,89 @@
         <button id="createUserBtn">Crear</button>
       </div>
       <div id="userError" class="msg bad" style="min-height:24px"></div>
-      <div class="helper">¿Ya tienes uno? Escríbelo igual y pulsa <em>Crear</em> para iniciar sesión.</div>
+      <div class="helper">¿Ya tienes uno? Escríbelo igual y pulsa <em>Crear</em> para iniciar sesión con él.</div>
     </div>
   </div>
+
+  <!-- Firebase SDK y helpers (Opción A) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
+    import { getDatabase, ref, get, set, runTransaction, update, query, orderByChild, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-database.js";
+
+    // 🔧 Rellena con tu configuración de Firebase (copiar de la consola)
+    const firebaseConfig = {
+      apiKey: "AIzaSyATQI5avb6a0NUKW4FQQmyEQut3fiH-XeE",
+      authDomain: "correlationsgame.firebaseapp.com",
+      databaseURL: "https://correlationsgame-default-rtdb.europe-west1.firebasedatabase.app",
+      projectId: "correlationsgame",
+      appId: "1:904382817908:web:5d6cc0a4d5314306289321"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getDatabase(app);
+
+    const toCanon = (s)=> (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+
+    const ensureAuth = ()=> new Promise((resolve, reject)=>{
+      onAuthStateChanged(auth, (user)=>{
+        if(user) resolve(user); else signInAnonymously(auth).catch(reject);
+      });
+    });
+
+    async function getCurrentPlayer(){
+      const user = await ensureAuth();
+      const snap = await get(ref(db, `players/${user.uid}`));
+      return snap.exists() ? { uid:user.uid, ...snap.val() } : null;
+    }
+
+    async function createOrLoginUsername(display){
+      const user = await ensureAuth();
+      const uid = user.uid;
+      const canon = toCanon(display);
+      if(!canon) throw new Error('El nombre no puede estar vacío.');
+
+      // Reserva atómica del username si no existe
+      const unameRef = ref(db, `usernames/${canon}`);
+      const txn = await runTransaction(unameRef, (curr)=>{
+        if(curr === null) return { uid, display: display.trim() };
+        if(curr && curr.uid === uid) return curr; // ya reservado por este uid
+        return; // abortar
+      });
+      if(!txn.committed && txn.snapshot.exists() && txn.snapshot.val().uid !== uid){
+        throw new Error('Ese nombre ya está en uso.');
+      }
+
+      // Crea/actualiza perfil del jugador
+      const playerRef = ref(db, `players/${uid}`);
+      const snap = await get(playerRef);
+      if(!snap.exists()){
+        await set(playerRef, { display: display.trim(), score: 0, created: Date.now() });
+      } else {
+        await update(playerRef, { display: display.trim() });
+      }
+      return { uid, display: display.trim(), canon };
+    }
+
+    async function addScore(delta){
+      const user = await ensureAuth();
+      const playerRef = ref(db, `players/${user.uid}`);
+      await runTransaction(playerRef, (curr)=>{ if(curr){ curr.score = (curr.score||0)+delta; } return curr; });
+    }
+
+    async function loadTop(n=10){
+      const q = query(ref(db, 'players'), orderByChild('score'), limitToLast(n));
+      const snap = await get(q);
+      const rows = [];
+      snap.forEach(child=>{ const v = child.val(); rows.push({ display:v.display, score:v.score||0 }); });
+      rows.sort((a,b)=> b.score - a.score);
+      return rows;
+    }
+
+    // Exponer helpers al juego
+    window.fbGame = { ensureAuth, getCurrentPlayer, createOrLoginUsername, addScore, loadTop };
+  </script>
 
 <script>
   // === Config del juego ===
@@ -118,80 +198,6 @@
   const boardBody = document.getElementById('boardBody');
   const gameRow = document.getElementById('gameRow');
 
-  // === Utilidades de usuarios/score (localStorage) ===
-  const LS_KEYS = {
-    users: 'asocia_users',        // array de usernames canon (lower)
-    data:  'asocia_user_data',    // mapa lower -> {display, score, created}
-    current: 'asocia_current_user'
-  };
-
-  function readJSON(key, fallback){
-    try{ return JSON.parse(localStorage.getItem(key)) ?? fallback }catch{ return fallback }
-  }
-  function writeJSON(key, val){ localStorage.setItem(key, JSON.stringify(val)); }
-
-  function toCanon(name){ return (name||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
-
-  function getUsers(){ return readJSON(LS_KEYS.users, []); }
-  function getData(){ return readJSON(LS_KEYS.data, {}); }
-  function setUsers(arr){ writeJSON(LS_KEYS.users, arr); }
-  function setData(map){ writeJSON(LS_KEYS.data, map); }
-
-  function getCurrent(){ return localStorage.getItem(LS_KEYS.current) || null; }
-  function setCurrent(canon){ if(canon) localStorage.setItem(LS_KEYS.current, canon); }
-  function clearCurrent(){ localStorage.removeItem(LS_KEYS.current); }
-
-  function ensureUser(name){
-    const canon = toCanon(name);
-    if(!canon) return {ok:false, reason:'El nombre no puede estar vacío.'};
-    const users = getUsers();
-    const data = getData();
-    if(users.includes(canon)){
-      // Iniciar sesión
-      setCurrent(canon);
-      return {ok:true, created:false, canon, display:data[canon].display};
-    } else {
-      // Crear si no existe
-      users.push(canon); setUsers(users);
-      data[canon] = { display:name.trim(), score:0, created: Date.now() };
-      setData(data);
-      setCurrent(canon);
-      return {ok:true, created:true, canon, display:name.trim()};
-    }
-  }
-
-  function currentDisplay(){
-    const canon = getCurrent();
-    if(!canon) return null;
-    const data = getData();
-    return data[canon]?.display || null;
-  }
-  function currentScore(){
-    const canon = getCurrent();
-    if(!canon) return 0;
-    return getData()[canon]?.score ?? 0;
-  }
-  function addScore(delta){
-    const canon = getCurrent(); if(!canon) return;
-    const data = getData();
-    data[canon].score = (data[canon].score||0) + delta;
-    setData(data);
-    updateUserBar();
-    renderBoard();
-  }
-
-  function updateUserBar(){
-    const disp = currentDisplay();
-    userTag.textContent = disp ? disp : 'Sin usuario';
-    scoreTag.textContent = String(currentScore());
-  }
-
-  function renderBoard(){
-    const data = getData();
-    const arr = Object.values(data).map(d=>({display:d.display, score:d.score})).sort((a,b)=>b.score-a.score).slice(0,8);
-    boardBody.innerHTML = arr.map(r=>`<tr><td>${r.display}</td><td>${r.score}</td></tr>`).join('') || '<tr><td colspan="2">Aún no hay puntuaciones</td></tr>';
-  }
-
   // === Juego ===
   function renderEndpoint(el, node){
     el.innerHTML = '';
@@ -217,24 +223,36 @@
   function normalize(s){return (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
 
   function correctPoints(){
-    // 100 si es al primer intento, 50 si no; 0 si se revela
+    // 100 al primer intento, 50 si ya hubo intentos, 0 si se revela
     return attemptsThisStep === 0 ? 100 : 50;
   }
 
-  function check(){
+  async function refreshPlayerUI(){
+    const p = await window.fbGame.getCurrentPlayer();
+    if(p){ userTag.textContent = p.display; scoreTag.textContent = String(p.score||0); }
+  }
+
+  async function refreshBoard(){
+    const rows = await window.fbGame.loadTop(8);
+    boardBody.innerHTML = rows.map(r=>`<tr><td>${r.display}</td><td>${r.score}</td></tr>`).join('') || '<tr><td colspan="2">Aún no hay puntuaciones</td></tr>';
+  }
+
+  async function check(){
     const val=normalize(middleInput.value);
     if(!val){showMsg('Escribe algo.','warn');return;}
     attemptsThisStep++;
     if((ANSWERS[edgeIndex]||[]).map(normalize).includes(val)){
       const pts = correctPoints();
-      addScore(pts);
+      showMsg(`¡Correcto! +${pts} puntos 🎉`, 'ok');
+      await window.fbGame.addScore(pts);
+      await refreshPlayerUI();
       if(edgeIndex < NODES.length-2){
-        showMsg(`¡Correcto! +${pts} puntos 🎉`, 'ok');
         setTimeout(()=>{ edgeIndex++; loadStep(); }, 900);
       } else {
-        showMsg(`🎉 ¡Cadena completa! Total +${pts} puntos`, 'ok');
+        showMsg('🎉 ¡Cadena completa!', 'ok');
         endGame();
       }
+      refreshBoard();
     } else {
       showMsg('No es correcto.','bad');
     }
@@ -259,34 +277,32 @@
 
   function showMsg(t,k){ msgEl.textContent=t; msgEl.className='msg '+k; }
 
-  // === Eventos ===
-  document.getElementById('checkBtn').onclick=check;
-  document.getElementById('revealBtn').onclick=reveal;
-  middleInput.addEventListener('keydown',e=>{ if(e.key==='Enter') check(); });
-
-  switchBtn.onclick = ()=>{ clearCurrent(); askUser(); };
-  createUserBtn.onclick = ()=>{
-    const res = ensureUser(userInput.value);
-    if(res.ok){ closeModal(); updateUserBar(); renderBoard(); loadStep(); }
-    else { userError.textContent = res.reason || 'Nombre inválido'; }
-  };
-
+  // === Modal y flujo de usuario ===
   function openModal(){ modal.style.display='flex'; setTimeout(()=>userInput.focus(), 0); }
   function closeModal(){ modal.style.display='none'; userInput.value=''; userError.textContent=''; }
 
-  function askUser(){
-    updateUserBar(); renderBoard();
-    if(!getCurrent()){ openModal(); }
-  }
+  document.getElementById('checkBtn').onclick=()=>{ check().catch(err=>showMsg(err.message,'bad')); };
+  document.getElementById('revealBtn').onclick=reveal;
+  middleInput.addEventListener('keydown',e=>{ if(e.key==='Enter') check(); });
+
+  document.getElementById('switchBtn').onclick = async ()=>{ openModal(); };
+  document.getElementById('createUserBtn').onclick = async ()=>{
+    try{
+      const res = await window.fbGame.createOrLoginUsername(userInput.value);
+      closeModal();
+      await refreshPlayerUI();
+      await refreshBoard();
+      loadStep();
+    } catch(err){ userError.textContent = err.message || 'Error creando usuario'; }
+  };
 
   // === Inicio ===
-  updateUserBar();
-  renderBoard();
-  if(!getCurrent()){
-    openModal();
-  } else {
-    loadStep();
-  }
+  (async ()=>{
+    await window.fbGame.ensureAuth();
+    const player = await window.fbGame.getCurrentPlayer();
+    if(!player){ openModal(); } else { await refreshPlayerUI(); loadStep(); }
+    await refreshBoard();
+  })();
 </script>
 </body>
 </html>
