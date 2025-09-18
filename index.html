@@ -29,12 +29,12 @@
 </head>
 <body>
   <header>🔗 Juego de Asociaciones</header>
-  <div class="row">
+  <div class="row" id="gameRow">
     <div class="box" id="startBox"></div>
     <div class="box"><input id="middleInput" placeholder="Escribe conexión…"/></div>
     <div class="box" id="endBox"></div>
   </div>
-  <div>
+  <div id="buttons">
     <button id="checkBtn">Comprobar</button>
     <button id="revealBtn">Mostrar solución</button>
   </div>
@@ -57,6 +57,8 @@
   const endBox   = document.getElementById('endBox');
   const middleInput = document.getElementById('middleInput');
   const msgEl = document.getElementById('message');
+  const gameRow = document.getElementById('gameRow');
+  const buttons = document.getElementById('buttons');
 
   function renderEndpoint(el, node){
     el.innerHTML = '';
@@ -84,11 +86,16 @@
     const val=normalize(middleInput.value);
     if(!val){showMsg('Escribe algo.','warn');return;}
     if(ANSWERS[edgeIndex].map(normalize).includes(val)){
-      showMsg('¡Correcto! 🎉','ok');
-      setTimeout(()=>{
-        edgeIndex=(edgeIndex+1)%(NODES.length-1);
-        loadStep();
-      },1000);
+      if(edgeIndex < NODES.length-2){
+        showMsg('¡Correcto! 🎉','ok');
+        setTimeout(()=>{
+          edgeIndex++;
+          loadStep();
+        },1000);
+      } else {
+        showMsg('🎉 ¡Has completado toda la cadena!','ok');
+        endGame();
+      }
     } else {
       showMsg('No es correcto.','bad');
     }
@@ -96,11 +103,21 @@
 
   function reveal(){
     middleInput.value=ANSWERS[edgeIndex][0]||'';
-    showMsg('Solución mostrada.','warn');
-    setTimeout(()=>{
-      edgeIndex=(edgeIndex+1)%(NODES.length-1);
-      loadStep();
-    },1500);
+    if(edgeIndex < NODES.length-2){
+      showMsg('Solución mostrada.','warn');
+      setTimeout(()=>{
+        edgeIndex++;
+        loadStep();
+      },1500);
+    } else {
+      showMsg('🎉 ¡Has completado toda la cadena!','ok');
+      endGame();
+    }
+  }
+
+  function endGame(){
+    gameRow.style.display='none';
+    buttons.style.display='none';
   }
 
   function showMsg(t,k){msgEl.textContent=t;msgEl.className='msg '+k;}
