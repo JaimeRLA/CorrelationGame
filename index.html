@@ -5,14 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Asocia — Cadena</title>
   <style>
-    body{margin:0;font-family:system-ui;background:#0b0f14;color:#e9eef7;display:flex;flex-direction:column;align-items:center;min-height:100vh}
-    header{padding:16px;font-weight:bold}
-    .row{display:flex;align-items:center;gap:12px;margin:20px 0}
-    .box{min-width:120px;min-height:80px;padding:12px;border-radius:12px;border:2px solid #2a3648;display:flex;align-items:center;justify-content:center;text-align:center}
-    .box strong{font-size:20px}
-    .box input{all:unset;width:100%;height:100%;text-align:center;font-size:18px}
-    button{all:unset;cursor:pointer;background:#4f9cff;color:#0b0f14;padding:10px 16px;border-radius:10px;font-weight:600;margin:8px}
-    .msg{margin-top:10px;font-size:14px}
+    body{
+      margin:0;
+      font-family:system-ui;
+      background:#0b0f14;
+      color:#e9eef7;
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      min-height:100vh;
+      text-align:center;
+    }
+    header{padding:24px;font-weight:bold;font-size:2rem}
+    .row{display:flex;align-items:center;justify-content:center;gap:24px;margin:40px 0}
+    .box{min-width:200px;min-height:140px;padding:20px;border-radius:16px;border:3px solid #2a3648;display:flex;align-items:center;justify-content:center;text-align:center;font-size:2rem}
+    .box strong{font-size:2rem}
+    .box input{all:unset;width:100%;height:100%;text-align:center;font-size:2rem}
+    button{all:unset;cursor:pointer;background:#4f9cff;color:#0b0f14;padding:16px 28px;border-radius:12px;font-weight:700;margin:12px;font-size:1.2rem}
+    .msg{margin-top:20px;font-size:1.2rem}
     .ok{color:#2ecc71}.bad{color:#ff5a5a}.warn{color:#f0c94b}
   </style>
 </head>
@@ -57,7 +68,7 @@
       el.appendChild(span);
     } else if(node.type==='image'){
       const img=document.createElement('img');
-      img.src=node.src;img.alt=node.alt||'Imagen';img.style.maxWidth='100%';img.style.maxHeight='60px';
+      img.src=node.src;img.alt=node.alt||'Imagen';img.style.maxWidth='100%';img.style.maxHeight='100px';
       el.appendChild(img);
     }
   }
