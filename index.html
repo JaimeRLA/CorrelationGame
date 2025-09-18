@@ -12,7 +12,7 @@
     .brand{font-weight:800;font-size:1.3rem}
     .userbar{display:flex;gap:12px;align-items:center;font-size:.95rem;color:var(--muted)}
     .pill{border:1px solid #2a3648;border-radius:999px;padding:6px 10px}
-    main{padding-top:84px; width: min(100%, 1100px);}
+    main{padding-top:84px}
     .row{display:flex;align-items:center;justify-content:center;gap:24px;margin:24px 0}
     .box{min-width:220px;min-height:150px;padding:20px;border-radius:16px;border:3px solid #2a3648;display:flex;align-items:center;justify-content:center;text-align:center;font-size:2rem}
     .box strong{font-size:2rem}
@@ -31,14 +31,10 @@
     .field input{flex:1;all:unset;background:#0f1620;border:1px solid #243246;border-radius:10px;padding:12px 14px;font-size:1rem}
     .helper{color:var(--muted);font-size:.9rem;margin-top:6px}
 
-    /* Leaderboard + búsqueda */
+    /* Leaderboard */
     .board{margin-top:28px;font-size:.95rem;color:var(--muted)}
     .board table{width:100%;border-collapse:collapse;margin-top:8px}
     .board th,.board td{padding:8px;border-bottom:1px solid #1a2330;text-align:left}
-    .searchbar{display:flex;gap:10px;align-items:center;justify-content:center;margin-top:14px}
-    .searchbar input{all:unset;background:#0f1620;border:1px solid #243246;border-radius:10px;padding:10px 12px;min-width:280px}
-    .results{max-width:560px;margin:8px auto 0;text-align:left}
-    .results button{background:#0f1620;color:var(--text);border:1px solid #243246;padding:10px 12px;border-radius:10px;width:100%; text-align:left}
   </style>
 </head>
 <body>
@@ -69,12 +65,7 @@
     <div class="msg" id="message"></div>
 
     <section class="board" id="leaderboard">
-      <div style="font-weight:700">Tabla de puntuación</div>
-      <div class="searchbar">
-        <input id="userSearch" placeholder="Busca un usuario (prefijo)" />
-        <button id="addUserBtn" class="secondary">Añadir a la tabla</button>
-      </div>
-      <div class="results" id="searchResults"></div>
+      <div style="font-weight:700">Top jugadores</div>
       <table>
         <thead><tr><th>Usuario</th><th>Puntuación</th></tr></thead>
         <tbody id="boardBody"></tbody>
@@ -100,7 +91,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
-    import { getDatabase, ref, get, set, runTransaction, update, query, orderByChild, limitToLast, orderByKey, startAt, endAt, limitToFirst } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-database.js";
+    import { getDatabase, ref, get, set, runTransaction, update, query, orderByChild, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-database.js";
 
     // 🔧 Rellena con tu configuración de Firebase (copiar de la consola)
     const firebaseConfig = {
@@ -118,7 +109,9 @@
     const toCanon = (s)=> (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 
     const ensureAuth = ()=> new Promise((resolve, reject)=>{
-      onAuthStateChanged(auth, (user)=>{ if(user) resolve(user); else signInAnonymously(auth).catch(reject); });
+      onAuthStateChanged(auth, (user)=>{
+        if(user) resolve(user); else signInAnonymously(auth).catch(reject);
+      });
     });
 
     async function getCurrentPlayer(){
@@ -132,19 +125,26 @@
       const uid = user.uid;
       const canon = toCanon(display);
       if(!canon) throw new Error('El nombre no puede estar vacío.');
+
+      // Reserva atómica del username si no existe
       const unameRef = ref(db, `usernames/${canon}`);
       const txn = await runTransaction(unameRef, (curr)=>{
         if(curr === null) return { uid, display: display.trim() };
-        if(curr && curr.uid === uid) return curr;
-        return; // abortar si es de otro
+        if(curr && curr.uid === uid) return curr; // ya reservado por este uid
+        return; // abortar
       });
       if(!txn.committed && txn.snapshot.exists() && txn.snapshot.val().uid !== uid){
         throw new Error('Ese nombre ya está en uso.');
       }
+
+      // Crea/actualiza perfil del jugador
       const playerRef = ref(db, `players/${uid}`);
       const snap = await get(playerRef);
-      if(!snap.exists()) await set(playerRef, { display: display.trim(), score: 0, created: Date.now() });
-      else await update(playerRef, { display: display.trim() });
+      if(!snap.exists()){
+        await set(playerRef, { display: display.trim(), score: 0, created: Date.now() });
+      } else {
+        await update(playerRef, { display: display.trim() });
+      }
       return { uid, display: display.trim(), canon };
     }
 
@@ -157,31 +157,14 @@
     async function loadTop(n=10){
       const q = query(ref(db, 'players'), orderByChild('score'), limitToLast(n));
       const snap = await get(q);
-      const rows = []; snap.forEach(child=>{ const v = child.val(); rows.push({ uid: child.key, display:v.display, score:v.score||0 }); });
+      const rows = [];
+      snap.forEach(child=>{ const v = child.val(); rows.push({ display:v.display, score:v.score||0 }); });
       rows.sort((a,b)=> b.score - a.score);
       return rows;
     }
 
-    // 🔎 Búsqueda por prefijo de username canon (usernames/<canon>)
-    async function searchUsernames(prefix, n=5){
-      const canon = toCanon(prefix);
-      if(!canon) return [];
-      const q = query(ref(db, 'usernames'), orderByKey(), startAt(canon), endAt(canon + "\uf8ff"), limitToFirst(n));
-      const snap = await get(q);
-      const out = [];
-      snap.forEach(child=>{ const v=child.val(); out.push({ canon: child.key, uid: v.uid, display: v.display }); });
-      return out;
-    }
-
-    async function getPlayerByUid(uid){
-      const snap = await get(ref(db, `players/${uid}`));
-      if(!snap.exists()) return null;
-      const v=snap.val();
-      return { uid, display: v.display, score: v.score||0 };
-    }
-
     // Exponer helpers al juego
-    window.fbGame = { ensureAuth, getCurrentPlayer, createOrLoginUsername, addScore, loadTop, searchUsernames, getPlayerByUid };
+    window.fbGame = { ensureAuth, getCurrentPlayer, createOrLoginUsername, addScore, loadTop };
   </script>
 
 <script>
@@ -214,12 +197,6 @@
   const userError = document.getElementById('userError');
   const boardBody = document.getElementById('boardBody');
   const gameRow = document.getElementById('gameRow');
-  const userSearch = document.getElementById('userSearch');
-  const addUserBtn = document.getElementById('addUserBtn');
-  const searchResults = document.getElementById('searchResults');
-
-  // === Mapa de filas del leaderboard (uid -> {display, score}) ===
-  const boardMap = new Map();
 
   // === Juego ===
   function renderEndpoint(el, node){
@@ -246,6 +223,7 @@
   function normalize(s){return (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
 
   function correctPoints(){
+    // 100 al primer intento, 50 si ya hubo intentos, 0 si se revela
     return attemptsThisStep === 0 ? 100 : 50;
   }
 
@@ -254,16 +232,9 @@
     if(p){ userTag.textContent = p.display; scoreTag.textContent = String(p.score||0); }
   }
 
-  function renderBoardFromMap(){
-    const rows = Array.from(boardMap.values()).sort((a,b)=> b.score - a.score);
-    boardBody.innerHTML = rows.map(r=>`<tr><td>${r.display}</td><td>${r.score}</td></tr>`).join('') || '<tr><td colspan="2">Aún no hay puntuaciones</td></tr>';
-  }
-
   async function refreshBoard(){
-    const top = await window.fbGame.loadTop(10);
-    // mezclar en boardMap sin perder los añadidos manuales
-    top.forEach(r=> boardMap.set(r.uid, r));
-    renderBoardFromMap();
+    const rows = await window.fbGame.loadTop(8);
+    boardBody.innerHTML = rows.map(r=>`<tr><td>${r.display}</td><td>${r.score}</td></tr>`).join('') || '<tr><td colspan="2">Aún no hay puntuaciones</td></tr>';
   }
 
   async function check(){
@@ -275,13 +246,13 @@
       showMsg(`¡Correcto! +${pts} puntos 🎉`, 'ok');
       await window.fbGame.addScore(pts);
       await refreshPlayerUI();
-      await refreshBoard();
       if(edgeIndex < NODES.length-2){
         setTimeout(()=>{ edgeIndex++; loadStep(); }, 900);
       } else {
         showMsg('🎉 ¡Cadena completa!', 'ok');
         endGame();
       }
+      refreshBoard();
     } else {
       showMsg('No es correcto.','bad');
     }
@@ -305,37 +276,6 @@
   }
 
   function showMsg(t,k){ msgEl.textContent=t; msgEl.className='msg '+k; }
-
-  // === Búsqueda y añadido manual a la tabla ===
-  let searchDebounce;
-  userSearch.addEventListener('input', ()=>{
-    clearTimeout(searchDebounce);
-    searchResults.innerHTML = '';
-    const q = userSearch.value.trim();
-    if(!q){ return; }
-    searchDebounce = setTimeout(async ()=>{
-      const matches = await window.fbGame.searchUsernames(q, 6);
-      if(!matches.length){ searchResults.innerHTML = '<div style="opacity:.7">Sin resultados</div>'; return; }
-      searchResults.innerHTML = matches.map(m=>
-        `<div style="margin:6px 0"><button data-canon="${m.canon}" data-uid="${m.uid}">➕ Añadir <strong>${m.display}</strong> <span style="opacity:.6">(@${m.canon})</span></button></div>`
-      ).join('');
-      [...searchResults.querySelectorAll('button')].forEach(btn=>{
-        btn.addEventListener('click', async ()=>{
-          const uid = btn.getAttribute('data-uid');
-          const player = await window.fbGame.getPlayerByUid(uid);
-          if(player){ boardMap.set(player.uid, player); renderBoardFromMap(); showMsg(`Añadido ${player.display} a la tabla.`, 'ok'); }
-        });
-      });
-    }, 250);
-  });
-
-  addUserBtn.addEventListener('click', async ()=>{
-    const q = userSearch.value.trim(); if(!q){ showMsg('Escribe un nombre a buscar.','warn'); return; }
-    const matches = await window.fbGame.searchUsernames(q, 1);
-    if(!matches.length){ showMsg('No se encontró ese usuario.','bad'); return; }
-    const player = await window.fbGame.getPlayerByUid(matches[0].uid);
-    if(player){ boardMap.set(player.uid, player); renderBoardFromMap(); showMsg(`Añadido ${player.display} a la tabla.`, 'ok'); }
-  });
 
   // === Modal y flujo de usuario ===
   function openModal(){ modal.style.display='flex'; setTimeout(()=>userInput.focus(), 0); }
