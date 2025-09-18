@@ -35,7 +35,12 @@ async function check(){
   if((ANSWERS[edgeIndex]||[]).map(normalize).includes(val)){
     const pts = correctPoints();
     showMsg(`¡Correcto! +${pts} puntos 🎉`, 'ok');
-    await addScore(pts);
+    try {
+        await addScore(pts);  // en game.js dentro de check()
+    } catch (e) {
+      showMsg('DB error: ' + (e.code || e.message), 'bad');
+      return;
+    }
     await refreshPlayerUI();
     await refreshBoard();
     if(edgeIndex < NODES.length-2){
