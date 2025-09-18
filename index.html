@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Asocia — Juego tipo Wordle</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --card:#10161d; --muted:#a7b0be; --text:#e9eef7; --accent:#4f9cff; --ok:#2ecc71; --bad:#ff5a5a; --warn:#f0c94b;
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    body{margin:0; font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, Noto Sans, "Apple Color Emoji", "Segoe UI Emoji"; background:linear-gradient(180deg,#0b0f14, #0d141d); color:var(--text);}
+    header{padding:20px 16px; display:flex; align-items:center; justify-content:space-between; gap:12px; border-bottom:1px solid #1d2633}
+    .brand{display:flex; align-items:center; gap:10px}
+    .logo{width:36px; height:36px; border-radius:12px; background:linear-gradient(135deg,var(--accent),#7aaeff); display:grid; place-items:center; font-weight:800; color:#0b0f14}
+    .title{font-size:18px; font-weight:700}
+    main{max-width:920px; margin:0 auto; padding:24px 16px 48px}
+    .card{background:var(--card); border:1px solid #1a2330; border-radius:var(--radius); padding:18px; box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .row{display:grid; grid-template-columns:1fr auto 1fr; gap:14px; align-items:center}
+    .col{display:flex; flex-direction:column; gap:8px}
+    .pill{font-size:12px; letter-spacing:.3px; color:var(--muted)}
+    .box{min-height:110px; border-radius:16px; border:1.5px dashed #2a3648; background:#0f1620; display:flex; align-items:center; justify-content:center; padding:12px; text-align:center}
+    .box strong{font-size:22px;}
+    .box img{max-width:100%; max-height:100px; object-fit:contain; border-radius:12px}
+    .arrow{font-size:22px; color:#6f7b8d}
+
+    .inputs{display:flex; gap:10px; flex-wrap:wrap; justify-content:center}
+    .chip{background:#121a25; border:1px solid #243246; border-radius:12px; padding:10px 12px; width:180px; max-width:48%; display:flex; gap:8px; align-items:center}
+    .chip input{all:unset; flex:1; font-size:14px}
+    .chip .idx{opacity:.6; font-size:12px}
+
+    .actions{display:flex; gap:10px; margin-top:14px; flex-wrap:wrap}
+    button{all:unset; background:var(--accent); color:#08101a; padding:12px 16px; border-radius:12px; font-weight:700; cursor:pointer}
+    button.secondary{background:#162232; color:var(--text); border:1px solid #29384f}
+    button.ghost{background:transparent; color:var(--muted)}
+    .msg{margin-top:10px; font-size:14px}
+    .msg.ok{color:var(--ok)}
+    .msg.bad{color:var(--bad)}
+    .msg.warn{color:var(--warn)}
+
+    .toolbar{display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:14px; flex-wrap:wrap}
+    .level-info{display:flex; gap:10px; align-items:center; color:var(--muted)}
+    .badge{background:#121a25; border:1px solid #233145; padding:6px 10px; border-radius:999px; font-size:12px}
+
+    .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px}
+    .hidden{display:none}
+    footer{opacity:.7; font-size:12px; margin-top:24px; text-align:center}
+    .separator{height:1px; background:#1a2330; margin:18px 0}
+
+    @media (max-width:640px){
+      .row{grid-template-columns:1fr}
+      .arrow{display:none}
+      .chip{max-width:100%}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand"><div class="logo">A</div><div class="title">Asocia</div></div>
+    <div class="level-info">
+      <span class="badge" id="progress">Nivel 1 / 1</span>
+      <span class="badge" id="attempts">Intentos: 0</span>
+    </div>
+  </header>
+  <main>
+    <section class="card">
+      <div class="toolbar">
+        <div>
+          <div style="font-weight:700; font-size:18px">Conecta las ideas</div>
+          <div style="color:var(--muted); font-size:13px">Rellena las cajas intermedias con palabras que relacionen la primera y la última.</div>
+        </div>
+        <div class="actions">
+          <button id="checkBtn">Comprobar</button>
+          <button class="secondary" id="revealBtn">Mostrar solución</button>
+          <button class="ghost" id="nextBtn">Siguiente nivel →</button>
+        </div>
+      </div>
+
+      <div class="row" id="gameRow">
+        <div class="col">
+          <span class="pill">Inicio</span>
+          <div class="box" id="startBox"></div>
+        </div>
+        <div class="arrow">▶</div>
+        <div class="col">
+          <span class="pill">Fin</span>
+          <div class="box" id="endBox"></div>
+        </div>
+      </div>
+
+      <div class="separator"></div>
+
+      <div class="inputs" id="inputs"></div>
+      <div class="msg" id="message"></div>
+    </section>
+
+    <footer>
+      <p>💡 Consejo: puedes usar texto o imágenes en los extremos. Edita la configuración en el bloque <code>LEVELS</code> del código.</p>
+    </footer>
+  </main>
+
+  <script>
+    // ==============================
+    //      CONFIGURACIÓN DEL JUEGO
+    // ==============================
+    /**
+     * Cada nivel define:
+     * - start: {type: 'text'|'image', value/src}
+     * - end:   {type: 'text'|'image', value/src}
+     * - slots: número de cajas intermedias
+     * - answers: array de arrays -> respuestas aceptadas por slot (minúsculas)
+     *   Por ejemplo, si slots=2, answers = [ ['animal','felino'], ['presa','roedor'] ]
+     *   Cada subarray son sinónimos aceptados para ese slot (usa minúsculas).
+     * - hint (opcional): una pista breve.
+     */
+    const LEVELS = [
+      {
+        start: { type: 'text', value: 'GATO' },
+        end:   { type: 'text', value: 'RATÓN' },
+        slots: 1,
+        answers: [ ['depredador','caza','cazador'] ],
+        hint: 'Piensa en la relación ecológica'
+      },
+      {
+        start: { type: 'image', src: 'https://upload.wikimedia.org/wikipedia/commons/0/0b/Apple-logo.png', alt:'Apple' },
+        end:   { type: 'text', value: 'MÚSICA' },
+        slots: 2,
+        answers: [ ['ipod','itunes'], ['reproductor','servicios','streaming'] ],
+        hint: 'Producto famoso + categoría'
+      },
+      {
+        start: { type: 'text', value: 'AGUA' },
+        end:   { type: 'text', value: 'ELECTRICIDAD' },
+        slots: 2,
+        answers: [ ['turbina','presa'], ['hidroeléctrica','generador','energía'] ],
+      }
+    ];
+
+    // ==============================
+    //       LÓGICA DEL JUEGO
+    // ==============================
+    const startBox = document.getElementById('startBox');
+    const endBox   = document.getElementById('endBox');
+    const inputsEl = document.getElementById('inputs');
+    const msgEl    = document.getElementById('message');
+    const checkBtn = document.getElementById('checkBtn');
+    const revealBtn= document.getElementById('revealBtn');
+    const nextBtn  = document.getElementById('nextBtn');
+    const attemptsBadge = document.getElementById('attempts');
+    const progressBadge = document.getElementById('progress');
+
+    let levelIndex = Number(localStorage.getItem('asocia_level')||0);
+    if(levelIndex >= LEVELS.length) levelIndex = 0;
+    let attempts = 0;
+
+    function renderEndpoint(container, data){
+      container.innerHTML = '';
+      if(data.type === 'text'){
+        const span = document.createElement('strong');
+        span.textContent = data.value;
+        container.appendChild(span);
+      } else if (data.type === 'image'){
+        const img = document.createElement('img');
+        img.src = data.src;
+        img.alt = data.alt || 'Imagen';
+        container.appendChild(img);
+      }
+    }
+
+    function renderInputs(level){
+      inputsEl.innerHTML = '';
+      for(let i=0;i<level.slots;i++){
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        const idx = document.createElement('span');
+        idx.className = 'idx';
+        idx.textContent = `#${i+1}`;
+        const input = document.createElement('input');
+        input.placeholder = 'Escribe aquí…';
+        input.setAttribute('data-slot', String(i));
+        input.autocapitalize = 'off';
+        input.spellcheck = false;
+        chip.appendChild(idx);
+        chip.appendChild(input);
+        inputsEl.appendChild(chip);
+      }
+    }
+
+    function normalize(str){
+      return (str||'').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    }
+
+    function checkAnswers(){
+      const level = LEVELS[levelIndex];
+      const values = [...inputsEl.querySelectorAll('input')].map(i=>normalize(i.value));
+      attempts++; attemptsBadge.textContent = `Intentos: ${attempts}`;
+      if(values.some(v=>!v)){
+        showMsg('Completa todas las cajas antes de comprobar.', 'warn');
+        return;
+      }
+      let allGood = true;
+      for(let i=0;i<level.slots;i++){
+        const accepted = (level.answers[i]||[]).map(normalize);
+        const ok = accepted.includes(values[i]);
+        if(!ok){ allGood = false; break; }
+      }
+      if(allGood){
+        showMsg('¡Correcto! 🎉', 'ok');
+        saveProgress();
+      } else {
+        showMsg('Aún no. Prueba con otra palabra 😉', 'bad');
+      }
+    }
+
+    function reveal(){
+      const level = LEVELS[levelIndex];
+      inputsEl.querySelectorAll('input').forEach((el, i)=>{
+        const accepted = level.answers[i];
+        if(accepted && accepted.length){ el.value = accepted[0]; }
+      });
+      showMsg('Solución rellenada. ¡Puedes pasar al siguiente nivel!', 'warn');
+      saveProgress();
+    }
+
+    function saveProgress(){
+      localStorage.setItem('asocia_level', String(levelIndex));
+    }
+
+    function loadLevel(){
+      const level = LEVELS[levelIndex];
+      attempts = 0; attemptsBadge.textContent = `Intentos: ${attempts}`;
+      progressBadge.textContent = `Nivel ${levelIndex+1} / ${LEVELS.length}`;
+      renderEndpoint(startBox, level.start);
+      renderEndpoint(endBox, level.end);
+      renderInputs(level);
+      msgEl.textContent = level.hint ? `Pista: ${level.hint}` : '';
+      msgEl.className = 'msg';
+    }
+
+    function nextLevel(){
+      levelIndex = (levelIndex + 1) % LEVELS.length;
+      loadLevel();
+      saveProgress();
+    }
+
+    function showMsg(text, kind){
+      msgEl.textContent = text;
+      msgEl.className = `msg ${kind||''}`;
+    }
+
+    // Eventos
+    checkBtn.addEventListener('click', checkAnswers);
+    revealBtn.addEventListener('click', reveal);
+    nextBtn.addEventListener('click', nextLevel);
+    inputsEl.addEventListener('keydown', (e)=>{
+      if(e.key === 'Enter') checkAnswers();
+    });
+
+    // Inicializar
+    loadLevel();
+  </script>
+</body>
+</html>
