@@ -25,8 +25,8 @@
     .box img{max-width:100%; max-height:100px; object-fit:contain; border-radius:12px}
     .arrow{font-size:22px; color:#6f7b8d}
 
-    .inputs{display:flex; gap:10px; flex-wrap:wrap; justify-content:center}
-    .chip{background:#121a25; border:1px solid #243246; border-radius:12px; padding:10px 12px; width:180px; max-width:48%; display:flex; gap:8px; align-items:center}
+    .input-area{margin-top:20px; display:flex; gap:10px; justify-content:center}
+    .chip{background:#121a25; border:1px solid #243246; border-radius:12px; padding:10px 12px; width:240px; display:flex; gap:8px; align-items:center}
     .chip input{all:unset; flex:1; font-size:14px}
     .chip .idx{opacity:.6; font-size:12px}
 
@@ -43,15 +43,12 @@
     .level-info{display:flex; gap:10px; align-items:center; color:var(--muted)}
     .badge{background:#121a25; border:1px solid #233145; padding:6px 10px; border-radius:999px; font-size:12px}
 
-    .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px}
-    .hidden{display:none}
     footer{opacity:.7; font-size:12px; margin-top:24px; text-align:center}
     .separator{height:1px; background:#1a2330; margin:18px 0}
 
     @media (max-width:640px){
       .row{grid-template-columns:1fr}
       .arrow{display:none}
-      .chip{max-width:100%}
     }
   </style>
 </head>
@@ -67,8 +64,8 @@
     <section class="card">
       <div class="toolbar">
         <div>
-          <div style="font-weight:700; font-size:18px">Conecta las ideas</div>
-          <div style="color:var(--muted); font-size:13px">Rellena las cajas intermedias con palabras que relacionen la primera y la última.</div>
+          <div style="font-weight:700; font-size:18px">Conecta paso a paso</div>
+          <div style="color:var(--muted); font-size:13px">Rellena la caja intermedia. La respuesta pasa a ser el nuevo inicio en el siguiente nivel.</div>
         </div>
         <div class="actions">
           <button id="checkBtn">Comprobar</button>
@@ -91,54 +88,42 @@
 
       <div class="separator"></div>
 
-      <div class="inputs" id="inputs"></div>
+      <div class="input-area" id="inputArea"></div>
       <div class="msg" id="message"></div>
     </section>
 
     <footer>
-      <p>💡 Consejo: puedes usar texto o imágenes en los extremos. Edita la configuración en el bloque <code>LEVELS</code> del código.</p>
+      <p>💡 Consejo: la palabra que completes será el inicio del próximo nivel.</p>
     </footer>
   </main>
 
   <script>
     // ==============================
-    //      CONFIGURACIÓN DEL JUEGO
+    //   CONFIGURACIÓN (CADENA LINEAL)
     // ==============================
     /**
-     * Cada nivel define:
-     * - start: {type: 'text'|'image', value/src}
-     * - end:   {type: 'text'|'image', value/src}
-     * - slots: número de cajas intermedias
-     * - answers: array de arrays -> respuestas aceptadas por slot (minúsculas)
-     *   Por ejemplo, si slots=2, answers = [ ['animal','felino'], ['presa','roedor'] ]
-     *   Cada subarray son sinónimos aceptados para ese slot (usa minúsculas).
-     * - hint (opcional): una pista breve.
+     * Ahora el juego funciona como una **cadena** de correlaciones:
+     * NODES = [A, B, C, D, ...]
+     * El jugador rellena **una sola** palabra que conecta A → B.
+     * Si acierta, el juego avanza y la **caja de fin** pasa a ser la **caja de inicio**
+     * para el siguiente paso (B → C), y así sucesivamente.
+     * 
+     * - NODES: extremos (texto o imagen) en orden.
+     * - ANSWERS[i]: lista de respuestas válidas para conectar NODES[i] con NODES[i+1].
      */
-    const LEVELS = [
-      {
-        start: { type: 'text', value: 'GATO' },
-        end:   { type: 'text', value: 'RATÓN' },
-        slots: 1,
-        answers: [ ['depredador','caza','cazador'] ],
-        hint: 'Piensa en la relación ecológica'
-      },
-      {
-        start: { type: 'image', src: 'https://upload.wikimedia.org/wikipedia/commons/0/0b/Apple-logo.png', alt:'Apple' },
-        end:   { type: 'text', value: 'MÚSICA' },
-        slots: 2,
-        answers: [ ['ipod','itunes'], ['reproductor','servicios','streaming'] ],
-        hint: 'Producto famoso + categoría'
-      },
-      {
-        start: { type: 'text', value: 'AGUA' },
-        end:   { type: 'text', value: 'ELECTRICIDAD' },
-        slots: 2,
-        answers: [ ['turbina','presa'], ['hidroeléctrica','generador','energía'] ],
-      }
+    const NODES = [
+      { type: 'text', value: 'GATO' },
+      { type: 'text', value: 'RATÓN' },
+      { type: 'text', value: 'QUESO' }
+    ];
+
+    const ANSWERS = [
+      ['depredador','cazador','caza'], // conecta GATO → RATÓN
+      ['alimento','comida','lacteo']   // conecta RATÓN → QUESO
     ];
 
     // ==============================
-    //       LÓGICA DEL JUEGO
+    //             UI
     // ==============================
     const startBox = document.getElementById('startBox');
     const endBox   = document.getElementById('endBox');
@@ -150,8 +135,9 @@
     const attemptsBadge = document.getElementById('attempts');
     const progressBadge = document.getElementById('progress');
 
-    let levelIndex = Number(localStorage.getItem('asocia_level')||0);
-    if(levelIndex >= LEVELS.length) levelIndex = 0;
+    // Índice del **paso** actual (arista i = NODES[i] → NODES[i+1])
+    let edgeIndex = Number(localStorage.getItem('asocia_edge')||0);
+    if(edgeIndex >= NODES.length-1) edgeIndex = 0;
     let attempts = 0;
 
     function renderEndpoint(container, data){
@@ -168,80 +154,73 @@
       }
     }
 
-    function renderInputs(level){
+    function renderSingleInput(){
       inputsEl.innerHTML = '';
-      for(let i=0;i<level.slots;i++){
-        const chip = document.createElement('div');
-        chip.className = 'chip';
-        const idx = document.createElement('span');
-        idx.className = 'idx';
-        idx.textContent = `#${i+1}`;
-        const input = document.createElement('input');
-        input.placeholder = 'Escribe aquí…';
-        input.setAttribute('data-slot', String(i));
-        input.autocapitalize = 'off';
-        input.spellcheck = false;
-        chip.appendChild(idx);
-        chip.appendChild(input);
-        inputsEl.appendChild(chip);
-      }
+      const chip = document.createElement('div');
+      chip.className = 'chip';
+      const idx = document.createElement('span');
+      idx.className = 'idx';
+      idx.textContent = '#1';
+      const input = document.createElement('input');
+      input.placeholder = 'Escribe la conexión…';
+      input.autocapitalize = 'off';
+      input.spellcheck = false;
+      chip.appendChild(idx);
+      chip.appendChild(input);
+      inputsEl.appendChild(chip);
     }
 
     function normalize(str){
-      return (str||'').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+      return (str||'').toString().trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+    }
+
+    function currentAccepted(){
+      return (ANSWERS[edgeIndex]||[]).map(normalize);
     }
 
     function checkAnswers(){
-      const level = LEVELS[levelIndex];
-      const values = [...inputsEl.querySelectorAll('input')].map(i=>normalize(i.value));
+      const value = normalize(inputsEl.querySelector('input')?.value || '');
       attempts++; attemptsBadge.textContent = `Intentos: ${attempts}`;
-      if(values.some(v=>!v)){
-        showMsg('Completa todas las cajas antes de comprobar.', 'warn');
-        return;
-      }
-      let allGood = true;
-      for(let i=0;i<level.slots;i++){
-        const accepted = (level.answers[i]||[]).map(normalize);
-        const ok = accepted.includes(values[i]);
-        if(!ok){ allGood = false; break; }
-      }
-      if(allGood){
-        showMsg('¡Correcto! 🎉', 'ok');
-        saveProgress();
+      if(!value){ showMsg('Escribe la palabra intermedia antes de comprobar.','warn'); return; }
+      const ok = currentAccepted().includes(value);
+      if(ok){
+        showMsg('¡Correcto! 🎉 Avanzamos al siguiente par.', 'ok');
+        nextStep();
       } else {
         showMsg('Aún no. Prueba con otra palabra 😉', 'bad');
       }
     }
 
     function reveal(){
-      const level = LEVELS[levelIndex];
-      inputsEl.querySelectorAll('input').forEach((el, i)=>{
-        const accepted = level.answers[i];
-        if(accepted && accepted.length){ el.value = accepted[0]; }
-      });
-      showMsg('Solución rellenada. ¡Puedes pasar al siguiente nivel!', 'warn');
-      saveProgress();
+      const accepted = currentAccepted();
+      const input = inputsEl.querySelector('input');
+      if(input && accepted.length){ input.value = accepted[0]; }
+      showMsg('Solución rellenada. Pulsa "Siguiente nivel" para continuar.', 'warn');
     }
 
     function saveProgress(){
-      localStorage.setItem('asocia_level', String(levelIndex));
+      localStorage.setItem('asocia_edge', String(edgeIndex));
     }
 
-    function loadLevel(){
-      const level = LEVELS[levelIndex];
+    function loadStep(){
       attempts = 0; attemptsBadge.textContent = `Intentos: ${attempts}`;
-      progressBadge.textContent = `Nivel ${levelIndex+1} / ${LEVELS.length}`;
-      renderEndpoint(startBox, level.start);
-      renderEndpoint(endBox, level.end);
-      renderInputs(level);
-      msgEl.textContent = level.hint ? `Pista: ${level.hint}` : '';
+      progressBadge.textContent = `Paso ${edgeIndex+1} / ${NODES.length-1}`;
+      renderEndpoint(startBox, NODES[edgeIndex]);
+      renderEndpoint(endBox,   NODES[edgeIndex+1]);
+      renderSingleInput();
+      msgEl.textContent = '';
       msgEl.className = 'msg';
     }
 
-    function nextLevel(){
-      levelIndex = (levelIndex + 1) % LEVELS.length;
-      loadLevel();
+    function nextStep(){
+      edgeIndex = (edgeIndex + 1);
+      if(edgeIndex >= NODES.length-1){
+        // Fin de la cadena → reinicia
+        edgeIndex = 0;
+        showMsg('¡Cadena completada! 🔁 Empezamos de nuevo.', 'ok');
+      }
       saveProgress();
+      loadStep();
     }
 
     function showMsg(text, kind){
@@ -252,13 +231,11 @@
     // Eventos
     checkBtn.addEventListener('click', checkAnswers);
     revealBtn.addEventListener('click', reveal);
-    nextBtn.addEventListener('click', nextLevel);
-    inputsEl.addEventListener('keydown', (e)=>{
-      if(e.key === 'Enter') checkAnswers();
-    });
+    nextBtn.addEventListener('click', nextStep);
+    inputsEl.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') checkAnswers(); });
 
     // Inicializar
-    loadLevel();
+    loadStep();
   </script>
 </body>
 </html>
