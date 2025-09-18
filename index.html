@@ -3,42 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Asocia — Cadena (Firebase)</title>
-  <style>
-    :root{--bg:#0b0f14;--text:#e9eef7;--accent:#4f9cff;--muted:#a7b0be;--ok:#2ecc71;--bad:#ff5a5a;--warn:#f0c94b}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;text-align:center}
-    header{position:fixed;top:0;left:0;right:0;padding:16px 20px;display:flex;justify-content:space-between;align-items:center;background:rgba(11,15,20,.6);backdrop-filter:blur(8px);border-bottom:1px solid #1a2330}
-    .brand{font-weight:800;font-size:1.3rem}
-    .userbar{display:flex;gap:12px;align-items:center;font-size:.95rem;color:var(--muted)}
-    .pill{border:1px solid #2a3648;border-radius:999px;padding:6px 10px}
-    main{padding-top:84px}
-    .row{display:flex;align-items:center;justify-content:center;gap:24px;margin:24px 0}
-    .box{min-width:220px;min-height:150px;padding:20px;border-radius:16px;border:3px solid #2a3648;display:flex;align-items:center;justify-content:center;text-align:center;font-size:2rem}
-    .box strong{font-size:2rem}
-    .box input{all:unset;width:100%;height:100%;text-align:center;font-size:2rem}
-    button{all:unset;cursor:pointer;background:var(--accent);color:#0b0f14;padding:14px 24px;border-radius:12px;font-weight:700;margin:8px;font-size:1.1rem}
-    .secondary{background:#162232;color:var(--text);border:1px solid #29384f}
-    .msg{margin-top:16px;font-size:1.1rem}
-    .ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
-    .stack{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
-
-    /* Modal usuario */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px}
-    .card{background:#10161d;border:1px solid #1a2330;border-radius:16px;max-width:520px;width:100%;padding:20px;text-align:left}
-    .card h2{margin:0 0 6px;font-size:1.4rem}
-    .field{display:flex;gap:10px;margin-top:10px}
-    .field input{flex:1;all:unset;background:#0f1620;border:1px solid #243246;border-radius:10px;padding:12px 14px;font-size:1rem}
-    .helper{color:var(--muted);font-size:.9rem;margin-top:6px}
-
-    /* Leaderboard */
-    .board{margin-top:28px;font-size:.95rem;color:var(--muted)}
-    .board table{width:100%;border-collapse:collapse;margin-top:8px}
-    .board th,.board td{padding:8px;border-bottom:1px solid #1a2330;text-align:left}
-  </style>
+  <title>Asocia — Cadena</title>
+  <link rel="stylesheet" href="./public/styles.css" />
 </head>
 <body>
-  <header>
+  <header class="app-header">
     <div class="brand">🔗 Asocia</div>
     <div class="userbar">
       <span class="pill" id="userTag">Sin usuario</span>
@@ -47,9 +16,9 @@
     </div>
   </header>
 
-  <main>
-    <h1 style="margin:0 0 8px">Juego de Asociaciones</h1>
-    <div class="stack" style="color:var(--muted);margin-bottom:14px">Escribe una palabra en la caja central que conecte el inicio con el fin.</div>
+  <main class="app-main">
+    <h1 class="title">Juego de Asociaciones</h1>
+    <div class="subtitle">Escribe una palabra en la caja central que conecte el inicio con el fin.</div>
 
     <div class="row" id="gameRow">
       <div class="box" id="startBox"></div>
@@ -65,7 +34,7 @@
     <div class="msg" id="message"></div>
 
     <section class="board" id="leaderboard">
-      <div style="font-weight:700">Top jugadores</div>
+      <div class="board-title">Top jugadores</div>
       <table>
         <thead><tr><th>Usuario</th><th>Puntuación</th></tr></thead>
         <tbody id="boardBody"></tbody>
@@ -87,222 +56,7 @@
     </div>
   </div>
 
-  <!-- Firebase SDK y helpers (Opción A) -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
-    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
-    import { getDatabase, ref, get, set, runTransaction, update, query, orderByChild, limitToLast } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-database.js";
-
-    // 🔧 Rellena con tu configuración de Firebase (copiar de la consola)
-    const firebaseConfig = {
-      apiKey: "AIzaSyATQI5avb6a0NUKW4FQQmyEQut3fiH-XeE",
-      authDomain: "correlationsgame.firebaseapp.com",
-      databaseURL: "https://correlationsgame-default-rtdb.europe-west1.firebasedatabase.app",
-      projectId: "correlationsgame",
-      appId: "1:904382817908:web:5d6cc0a4d5314306289321"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getDatabase(app);
-
-    const toCanon = (s)=> (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-
-    const ensureAuth = ()=> new Promise((resolve, reject)=>{
-      onAuthStateChanged(auth, (user)=>{
-        if(user) resolve(user); else signInAnonymously(auth).catch(reject);
-      });
-    });
-
-    async function getCurrentPlayer(){
-      const user = await ensureAuth();
-      const snap = await get(ref(db, `players/${user.uid}`));
-      return snap.exists() ? { uid:user.uid, ...snap.val() } : null;
-    }
-
-    async function createOrLoginUsername(display){
-      const user = await ensureAuth();
-      const uid = user.uid;
-      const canon = toCanon(display);
-      if(!canon) throw new Error('El nombre no puede estar vacío.');
-
-      // Reserva atómica del username si no existe
-      const unameRef = ref(db, `usernames/${canon}`);
-      const txn = await runTransaction(unameRef, (curr)=>{
-        if(curr === null) return { uid, display: display.trim() };
-        if(curr && curr.uid === uid) return curr; // ya reservado por este uid
-        return; // abortar
-      });
-      if(!txn.committed && txn.snapshot.exists() && txn.snapshot.val().uid !== uid){
-        throw new Error('Ese nombre ya está en uso.');
-      }
-
-      // Crea/actualiza perfil del jugador
-      const playerRef = ref(db, `players/${uid}`);
-      const snap = await get(playerRef);
-      if(!snap.exists()){
-        await set(playerRef, { display: display.trim(), score: 0, created: Date.now() });
-      } else {
-        await update(playerRef, { display: display.trim() });
-      }
-      return { uid, display: display.trim(), canon };
-    }
-
-    async function addScore(delta){
-      const user = await ensureAuth();
-      const playerRef = ref(db, `players/${user.uid}`);
-      await runTransaction(playerRef, (curr)=>{ if(curr){ curr.score = (curr.score||0)+delta; } return curr; });
-    }
-
-    async function loadTop(n=10){
-      const q = query(ref(db, 'players'), orderByChild('score'), limitToLast(n));
-      const snap = await get(q);
-      const rows = [];
-      snap.forEach(child=>{ const v = child.val(); rows.push({ display:v.display, score:v.score||0 }); });
-      rows.sort((a,b)=> b.score - a.score);
-      return rows;
-    }
-
-    // Exponer helpers al juego
-    window.fbGame = { ensureAuth, getCurrentPlayer, createOrLoginUsername, addScore, loadTop };
-  </script>
-
-<script>
-  // === Config del juego ===
-  const NODES = [
-    { type:'text', value:'GATO' },
-    { type:'text', value:'RATÓN' },
-    { type:'text', value:'QUESO' }
-  ];
-  const ANSWERS = [
-    ['depredador','cazador','caza'],
-    ['alimento','comida','lacteo']
-  ];
-
-  // === Estado de juego ===
-  let edgeIndex = 0; // paso actual
-  let attemptsThisStep = 0;
-
-  // === DOM ===
-  const startBox = document.getElementById('startBox');
-  const endBox   = document.getElementById('endBox');
-  const middleInput = document.getElementById('middleInput');
-  const msgEl = document.getElementById('message');
-  const userTag = document.getElementById('userTag');
-  const scoreTag = document.getElementById('scoreTag');
-  const switchBtn = document.getElementById('switchBtn');
-  const modal = document.getElementById('userModal');
-  const userInput = document.getElementById('userInput');
-  const createUserBtn = document.getElementById('createUserBtn');
-  const userError = document.getElementById('userError');
-  const boardBody = document.getElementById('boardBody');
-  const gameRow = document.getElementById('gameRow');
-
-  // === Juego ===
-  function renderEndpoint(el, node){
-    el.innerHTML = '';
-    if(node.type==='text'){
-      const span=document.createElement('strong');
-      span.textContent=node.value; el.appendChild(span);
-    } else if(node.type==='image'){
-      const img=document.createElement('img');
-      img.src=node.src; img.alt=node.alt||'Imagen'; img.style.maxWidth='100%'; img.style.maxHeight='100px';
-      el.appendChild(img);
-    }
-  }
-
-  function loadStep(){
-    renderEndpoint(startBox,NODES[edgeIndex]);
-    renderEndpoint(endBox,NODES[edgeIndex+1]);
-    middleInput.value='';
-    msgEl.textContent=''; msgEl.className='msg';
-    attemptsThisStep = 0;
-    middleInput.focus();
-  }
-
-  function normalize(s){return (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');}
-
-  function correctPoints(){
-    // 100 al primer intento, 50 si ya hubo intentos, 0 si se revela
-    return attemptsThisStep === 0 ? 100 : 50;
-  }
-
-  async function refreshPlayerUI(){
-    const p = await window.fbGame.getCurrentPlayer();
-    if(p){ userTag.textContent = p.display; scoreTag.textContent = String(p.score||0); }
-  }
-
-  async function refreshBoard(){
-    const rows = await window.fbGame.loadTop(8);
-    boardBody.innerHTML = rows.map(r=>`<tr><td>${r.display}</td><td>${r.score}</td></tr>`).join('') || '<tr><td colspan="2">Aún no hay puntuaciones</td></tr>';
-  }
-
-  async function check(){
-    const val=normalize(middleInput.value);
-    if(!val){showMsg('Escribe algo.','warn');return;}
-    attemptsThisStep++;
-    if((ANSWERS[edgeIndex]||[]).map(normalize).includes(val)){
-      const pts = correctPoints();
-      showMsg(`¡Correcto! +${pts} puntos 🎉`, 'ok');
-      await window.fbGame.addScore(pts);
-      await refreshPlayerUI();
-      if(edgeIndex < NODES.length-2){
-        setTimeout(()=>{ edgeIndex++; loadStep(); }, 900);
-      } else {
-        showMsg('🎉 ¡Cadena completa!', 'ok');
-        endGame();
-      }
-      refreshBoard();
-    } else {
-      showMsg('No es correcto.','bad');
-    }
-  }
-
-  function reveal(){
-    middleInput.value=(ANSWERS[edgeIndex]||[])[0]||'';
-    if(edgeIndex < NODES.length-2){
-      showMsg('Solución mostrada (0 puntos).', 'warn');
-      setTimeout(()=>{ edgeIndex++; loadStep(); }, 900);
-    } else {
-      showMsg('Solución mostrada (0 puntos). 🎉 Cadena completa', 'warn');
-      endGame();
-    }
-  }
-
-  function endGame(){
-    gameRow.style.display='none';
-    document.getElementById('checkBtn').style.display='none';
-    document.getElementById('revealBtn').style.display='none';
-  }
-
-  function showMsg(t,k){ msgEl.textContent=t; msgEl.className='msg '+k; }
-
-  // === Modal y flujo de usuario ===
-  function openModal(){ modal.style.display='flex'; setTimeout(()=>userInput.focus(), 0); }
-  function closeModal(){ modal.style.display='none'; userInput.value=''; userError.textContent=''; }
-
-  document.getElementById('checkBtn').onclick=()=>{ check().catch(err=>showMsg(err.message,'bad')); };
-  document.getElementById('revealBtn').onclick=reveal;
-  middleInput.addEventListener('keydown',e=>{ if(e.key==='Enter') check(); });
-
-  document.getElementById('switchBtn').onclick = async ()=>{ openModal(); };
-  document.getElementById('createUserBtn').onclick = async ()=>{
-    try{
-      const res = await window.fbGame.createOrLoginUsername(userInput.value);
-      closeModal();
-      await refreshPlayerUI();
-      await refreshBoard();
-      loadStep();
-    } catch(err){ userError.textContent = err.message || 'Error creando usuario'; }
-  };
-
-  // === Inicio ===
-  (async ()=>{
-    await window.fbGame.ensureAuth();
-    const player = await window.fbGame.getCurrentPlayer();
-    if(!player){ openModal(); } else { await refreshPlayerUI(); loadStep(); }
-    await refreshBoard();
-  })();
-</script>
+  <!-- App -->
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

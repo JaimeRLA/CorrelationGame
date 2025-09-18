@@ -1,0 +1,3 @@
+# Ignore local Firebase config
+src/firebase-config.js
+.DS_Store
