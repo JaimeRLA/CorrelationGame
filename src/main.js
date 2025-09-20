@@ -1,4 +1,7 @@
 // src/main.js
+// Arranque minimal: solo inicia el juego. (El juego gestiona el modal y login)
 import { initGame } from './game.js';
-// Asegúrate de crear src/firebase-config.js a partir de src/firebase-config.example.js
-initGame();
+
+window.addEventListener('DOMContentLoaded', () => {
+  initGame().catch(err => console.error('Init error:', err));
+});

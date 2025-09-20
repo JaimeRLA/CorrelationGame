@@ -1,133 +1,298 @@
-<!DOCTYPE html>
 <html lang="es">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Asocia — Cadena</title>
   <style>
-    :root{--bg:#0b0f14;--text:#e9eef7;--accent:#4f9cff;--muted:#a7b0be;--ok:#2ecc71;--bad:#ff5a5a;--warn:#f0c94b}
-    *{box-sizing:border-box}
+    :root {
+      --bg: #0b0f14;
+      --text: #e9eef7;
+      --accent: #4f9cff;
+      --muted: #a7b0be;
+      --ok: #2ecc71;
+      --bad: #ff5a5a;
+      --warn: #f0c94b
+    }
+
+    * {
+      box-sizing: border-box
+    }
 
     /* Ya no centramos todo el body (para que el header pueda ocupar 100%) */
-    body{
-      margin:0;
-      font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
-      background:var(--bg);
-      color:var(--text);
-      display:flex;
-      flex-direction:column;
-      align-items:stretch;   /* <- importante: el header se estira al 100% */
-      min-height:100vh;
-      text-align:center;     /* el contenido principal sí mantiene centrado */
+    body {
+      margin: 0;
+      font-family: system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      /* <- importante: el header se estira al 100% */
+      min-height: 100vh;
+      text-align: center;
+      /* el contenido principal sí mantiene centrado */
     }
 
     /* Header ancho completo */
-    header{
-      position:sticky;top:0;left:0;right:0;
-      padding:16px 20px;
-      background:rgba(11,15,20,.6);
-      backdrop-filter:blur(8px);
-      border-bottom:1px solid #1a2330;
-      text-align:initial; /* evita el centrado heredado en su contenido */
-      z-index:10;
-      width:100%;
+    header {
+      position: sticky;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 16px 20px;
+      background: rgba(11, 15, 20, .6);
+      backdrop-filter: blur(8px);
+      border-bottom: 1px solid #1a2330;
+      text-align: initial;
+      /* evita el centrado heredado en su contenido */
+      z-index: 10;
+      width: 100%;
     }
-    .header-inner{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      width:100%;        /* <- ocupa todo el ancho */
-      margin:0;          /* <- sin centrado */
+
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      /* <- ocupa todo el ancho */
+      margin: 0;
+      /* <- sin centrado */
       /* sin max-width, para que llegue a los bordes del viewport */
     }
-    .brand{font-weight:800;font-size:1.3rem}
-    .userbar{display:flex;gap:12px;align-items:center;font-size:.95rem;color:var(--muted)}
-    .pill{border:1px solid #2a3648;border-radius:999px;padding:6px 10px}
+
+    .brand {
+      font-weight: 800;
+      font-size: 1.3rem
+    }
+
+    .userbar {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      font-size: .95rem;
+      color: var(--muted)
+    }
+
+    .pill {
+      border: 1px solid #2a3648;
+      border-radius: 999px;
+      padding: 6px 10px
+    }
 
     /* El contenido principal sí lo centramos con max-width */
-    main{width:min(980px,100%);margin:0 auto;padding:36px 16px}
-    h1{margin:0 0 8px}
-    .subtitle{color:var(--muted);margin-bottom:14px}
+    main {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      padding: 36px 16px
+    }
 
-    .row{display:flex;align-items:center;justify-content:center;gap:24px;margin:24px 0;flex-wrap:wrap}
-    .box{min-width:220px;min-height:150px;padding:20px;border-radius:16px;border:3px solid #2a3648;display:flex;align-items:center;justify-content:center;text-align:center;font-size:2rem}
-    .box strong{font-size:2rem}
-    .box input{all:unset;width:100%;height:100%;text-align:center;font-size:2rem}
+    h1 {
+      margin: 0 0 8px
+    }
 
-    button{all:unset;cursor:pointer;background:var(--accent);color:#0b0f14;padding:14px 24px;border-radius:12px;font-weight:700;margin:8px;font-size:1.05rem}
-    button[disabled]{opacity:.6;cursor:not-allowed}
-    .secondary{background:#162232;color:var(--text);border:1px solid #29384f}
-    .stack{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
-    .msg{margin-top:16px;font-size:1.1rem;min-height:1.4em}
-    .ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 14px
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      margin: 24px 0;
+      flex-wrap: wrap
+    }
+
+    .box {
+      min-width: 220px;
+      min-height: 150px;
+      padding: 20px;
+      border-radius: 16px;
+      border: 3px solid #2a3648;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 2rem
+    }
+
+    .box strong {
+      font-size: 2rem
+    }
+
+    .box input {
+      all: unset;
+      width: 100%;
+      height: 100%;
+      text-align: center;
+      font-size: 2rem
+    }
+
+    button {
+      all: unset;
+      cursor: pointer;
+      background: var(--accent);
+      color: #0b0f14;
+      padding: 14px 24px;
+      border-radius: 12px;
+      font-weight: 700;
+      margin: 8px;
+      font-size: 1.05rem
+    }
+
+    button[disabled] {
+      opacity: .6;
+      cursor: not-allowed
+    }
+
+    .secondary {
+      background: #162232;
+      color: var(--text);
+      border: 1px solid #29384f
+    }
+
+    .stack {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center
+    }
+
+    .msg {
+      margin-top: 16px;
+      font-size: 1.1rem;
+      min-height: 1.4em
+    }
+
+    .ok {
+      color: var(--ok)
+    }
+
+    .bad {
+      color: var(--bad)
+    }
+
+    .warn {
+      color: var(--warn)
+    }
 
     /* Leaderboard */
-    .board{margin-top:28px;font-size:.95rem;color:var(--muted)}
-    .board table{width:100%;border-collapse:collapse;margin-top:8px}
-    .board th,.board td{padding:8px;border-bottom:1px solid #1a2330;text-align:left}
+    .board {
+      margin-top: 28px;
+      font-size: .95rem;
+      color: var(--muted)
+    }
+
+    .board table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 8px
+    }
+
+    .board th,
+    .board td {
+      padding: 8px;
+      border-bottom: 1px solid #1a2330;
+      text-align: left
+    }
 
     /* Modal */
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px}
-    .card{background:#10161d;border:1px solid #1a2330;border-radius:16px;max-width:520px;width:100%;padding:20px;text-align:left}
-    .card h2{margin:0 0 6px;font-size:1.4rem}
-    .field{display:flex;gap:10px;margin-top:10px}
-    .field input{flex:1;all:unset;background:#0f1620;border:1px solid #243246;border-radius:10px;padding:12px 14px;font-size:1rem}
-    .helper{color:var(--muted);font-size:.9rem;margin-top:6px}
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .6);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px
+    }
+
+    .card {
+      background: #10161d;
+      border: 1px solid #1a2330;
+      border-radius: 16px;
+      max-width: 520px;
+      width: 100%;
+      padding: 20px;
+      text-align: left
+    }
+
+    .card h2 {
+      margin: 0 0 6px;
+      font-size: 1.4rem
+    }
+
+    .field {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px
+    }
+
+    .field input {
+      flex: 1;
+      all: unset;
+      background: #0f1620;
+      border: 1px solid #243246;
+      border-radius: 10px;
+      padding: 12px 14px;
+      font-size: 1rem
+    }
+
+    .helper {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-top: 6px
+    }
   </style>
 </head>
+
 <body>
   <header>
     <div class="header-inner">
-      <div class="brand"> Correlate</div>
-      <div class="userbar">
-        <span class="pill" id="userTag">Sin usuario</span>
-        <span class="pill">⭐ <span id="scoreTag">0</span></span>
-        <button class="secondary" id="switchBtn">Cambiar usuario</button>
-      </div>
+      <div class="brand"> Correlate!</div>
+      <div class="userbar"> <span class="pill" id="userTag">Sin usuario</span> <span class="pill">⭐ <span
+            id="scoreTag">0</span></span> <button class="secondary" id="switchBtn">Cambiar usuario</button> </div>
     </div>
   </header>
-
   <main>
     <h1>Juego de Asociaciones</h1>
     <div class="subtitle">Escribe una palabra en la caja central que conecte el inicio con el fin.</div>
-
     <div class="row" id="gameRow">
       <div class="box" id="startBox"></div>
-      <div class="box"><input id="middleInput" placeholder="Escribe conexión…"/></div>
+      <div class="box"><input id="middleInput" placeholder="Escribe conexión…" /></div>
       <div class="box" id="endBox"></div>
     </div>
-
-    <div class="stack">
-      <button id="checkBtn">Comprobar</button>
-      <button id="revealBtn" class="secondary">Mostrar solución</button>
-    </div>
-
+    <div class="stack"> <button id="checkBtn">Comprobar</button> <button id="revealBtn" class="secondary">Mostrar
+        solución</button> </div>
     <div class="msg" id="message"></div>
-
     <section class="board" id="leaderboard">
       <div style="font-weight:700">Top jugadores</div>
       <table>
-        <thead><tr><th>Usuario</th><th>Puntuación</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Usuario</th>
+            <th>Puntuación</th>
+          </tr>
+        </thead>
         <tbody id="boardBody"></tbody>
       </table>
     </section>
-  </main>
-
-  <!-- Modal de usuario -->
-  <div class="modal" id="userModal">
+  </main> <!-- Modal de usuario -->
+  <div class="modal" id="userModal" style="display:none">
     <div class="card">
       <h2>Crea tu usuario</h2>
-      <div class="helper">El nombre debe ser único. No se distingue entre mayúsculas/minúsculas.</div>
-      <div class="field">
-        <input id="userInput" placeholder="Tu nombre de usuario" maxlength="24" />
-        <button id="createUserBtn">Crear</button>
-      </div>
+      <div class="field" style="margin-top:10px"> <input id="userInput" placeholder="Tu nombre de usuario"
+          maxlength="24" /> </div>
+      <div class="field"> <input id="passInput" type="password" placeholder="Contraseña (mín. 6)" minlength="6" />
+        <button id="createUserBtn">Entrar</button> </div>
       <div id="userError" class="msg bad" style="min-height:24px"></div>
-      <div class="helper">¿Ya tienes uno? Escríbelo igual y pulsa <em>Crear</em> para iniciar sesión con él.</div>
+      <div class="helper">Si el usuario no existe, se creará con esa contraseña.</div>
     </div>
-  </div>
-
-  <!-- Arranque de la app -->
+  </div> <!-- Arranque de la app -->
   <script type="module" src="./src/main.js"></script>
 </body>
+
 </html>
