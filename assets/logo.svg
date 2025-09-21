@@ -1,0 +1,24 @@
+<svg viewBox="0 0 720 160" xmlns="http://www.w3.org/2000/svg" width="220" height="49" aria-label="Correlate!">
+  <defs>
+    <style>
+      .fg{ fill: #e9eef7; }
+      .accent{ fill: #4f9cff; stroke: #4f9cff; }
+      .link{ stroke: #4f9cff; fill: none; stroke-width: 12; stroke-linecap: round; }
+      .muted{ fill: rgba(255,255,255,.18); }
+      text{ font: 800 74px/1 -apple-system, system-ui, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif; letter-spacing: .5px; }
+    </style>
+  </defs>
+
+  <!-- Ícono (3 nodos + enlaces) -->
+  <g transform="translate(12,16)">
+    <circle cx="56" cy="64" r="20" class="accent"/>
+    <circle cx="118" cy="18" r="16" class="muted"/>
+    <circle cx="118" cy="112" r="16" class="muted"/>
+    <path d="M72 54 L102 30 M72 74 L102 98" class="link"/>
+  </g>
+
+  <!-- Wordmark -->
+  <g transform="translate(180,116)">
+    <text class="fg">Correlate!</text>
+  </g>
+</svg>

@@ -1,9 +1,7 @@
-// src/main.js?v=42
-// Conecta botones de cabecera y modal. Tras login/registro, recarga para que game.js arranque con el perfil activo.
-
-import { initGame } from './game.js?v=42';
-import { els, setAuthMode, openModal, closeModal, renderBoard } from './ui.js?v=42';
-import { loginUsername, registerUsername, getCurrentProfile, loadTop } from './firebase.js?v=42';
+// src/main.js?v=43
+import { initGame } from './game.js?v=43';
+import { els, setAuthMode, openModal, closeModal, renderBoard } from './ui.js?v=43';
+import { loginUsername, registerUsername, getCurrentProfile, loadTop } from './firebase.js?v=43';
 
 window.addEventListener('DOMContentLoaded', async () => {
   await initGame().catch(err => console.error('Init error:', err));

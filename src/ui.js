@@ -1,4 +1,4 @@
-// src/ui.js?v=42
+// src/ui.js?v=43
 const $ = (id) => document.getElementById(id);
 
 export const els = {

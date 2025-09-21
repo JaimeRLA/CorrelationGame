@@ -1,22 +1,18 @@
-// src/game.js?v=42
-// Lógica del juego + UI con bloqueo diario al completar la cadena.
-
-import { NODES, ANSWERS } from './config/levels.js?v=42';
+// src/game.js?v=43
+import { NODES, ANSWERS } from './config/levels.js?v=43';
 import {
   ensureAuth, getCurrentProfile, createOrLoginUsername,
   addScoreDaily, loadTop, getCooldownMs
-} from './firebase.js?v=42';
-import { els, showMsg, renderEndpoint, openModal, closeModal, renderBoard } from './ui.js?v=42';
+} from './firebase.js?v=43';
+import { els, showMsg, renderEndpoint, openModal, closeModal, renderBoard } from './ui.js?v=43';
 
 let edgeIndex = 0;
 let attemptsThisStep = 0;
 let sessionPoints = 0;
 
-// Utils
 function normalize(s){ return (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
 function correctPoints(){ return attemptsThisStep === 0 ? 100 : 50; }
 
-// Render del paso
 function loadStep(){
   renderEndpoint(els.startBox, NODES[edgeIndex]);
   renderEndpoint(els.endBox, NODES[edgeIndex+1]);
@@ -26,7 +22,6 @@ function loadStep(){
   els.middleInput.focus();
 }
 
-// UI perfil
 async function refreshProfileUI(){
   const p = await getCurrentProfile();
   if (p){
@@ -35,7 +30,6 @@ async function refreshProfileUI(){
   }
 }
 
-// Leaderboard
 async function refreshBoardSafe(){
   try {
     const rows = await loadTop(8);
@@ -45,7 +39,6 @@ async function refreshBoardSafe(){
   }
 }
 
-// Bloqueo diario
 async function enforceDailyLock(){
   const remaining = await getCooldownMs();
   const locked = remaining > 0;
@@ -64,7 +57,6 @@ async function enforceDailyLock(){
   return locked;
 }
 
-// Comprobar
 async function check(){
   const val = normalize(els.middleInput.value);
   if(!val){ showMsg('Escribe algo.','warn'); return; }
@@ -81,7 +73,7 @@ async function check(){
       setTimeout(()=>{ edgeIndex++; loadStep(); }, 900);
     } else {
       try {
-        await addScoreDaily(sessionPoints);  // ✔️ Marca el día + suma puntos
+        await addScoreDaily(sessionPoints);
         await refreshProfileUI();
         await refreshBoardSafe();
         await enforceDailyLock();
@@ -103,14 +95,12 @@ async function check(){
   }
 }
 
-// Mostrar solución y avanzar
 async function reveal(){
   els.middleInput.value = (ANSWERS[edgeIndex]||[])[0] || '';
   if (edgeIndex < NODES.length-2) {
     showMsg('Solución mostrada (0 puntos).','warn');
     setTimeout(()=>{ edgeIndex++; loadStep(); }, 900);
   } else {
-    // Consumes el día aunque reveles al final con 0 puntos
     try {
       await addScoreDaily(0);
       await enforceDailyLock();
@@ -129,23 +119,19 @@ async function reveal(){
   }
 }
 
-// Fin
 function endGame(){
   els.gameRow.style.display='none';
   els.checkBtn.style.display='none';
   els.revealBtn.style.display='none';
 }
 
-// Init
 export async function initGame(){
-  console.log('GAME v42 loaded');
+  console.log('GAME v43 loaded');
 
-  // Listeners
   els.checkBtn.onclick = ()=>{ check().catch(err=>showMsg(err.message,'bad')); };
   els.revealBtn.onclick = ()=>{ reveal().catch(err=>showMsg(err.message,'bad')); };
   els.middleInput.addEventListener('keydown', e=>{ if(e.key==='Enter') check(); });
 
-  // Compat (no se usan, pero no rompen)
   els.switchBtn.onclick = ()=> openModal();
   els.createUserBtn.onclick = async ()=>{
     try{
@@ -165,7 +151,7 @@ export async function initGame(){
   await ensureAuth();
   const profile = await getCurrentProfile();
   if (!profile) {
-    // El modal lo abre main.js cuando pulses Iniciar/Crear
+    // el modal lo abre main.js con los botones del header
   } else {
     await refreshProfileUI();
     edgeIndex = 0;

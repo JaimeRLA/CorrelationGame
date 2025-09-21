@@ -1,0 +1,15 @@
+<svg viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" aria-label="Correlate icon">
+  <defs>
+    <style>
+      .bg{ fill:#0b0f14; }
+      .accent{ fill:#4f9cff; stroke:#4f9cff; }
+      .muted{ fill:#e9eef7; opacity:.18; }
+      .link{ stroke:#4f9cff; fill:none; stroke-width:8; stroke-linecap:round; }
+    </style>
+  </defs>
+  <rect width="128" height="128" rx="20" class="bg"/>
+  <circle cx="44" cy="64" r="16" class="accent"/>
+  <circle cx="88" cy="36" r="12" class="muted"/>
+  <circle cx="88" cy="92" r="12" class="muted"/>
+  <path d="M56 56 L78 44 M56 72 L78 84" class="link"/>
+</svg>

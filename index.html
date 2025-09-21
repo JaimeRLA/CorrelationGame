@@ -3,18 +3,27 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Asocia — Cadena</title>
+  <title>Correlate! — Juego de asociaciones</title>
+
+  <!-- Favicon / Iconos -->
+  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
+  <link rel="icon" href="./favicon.ico"> <!-- opcional -->
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" sizes="180x180"> <!-- opcional -->
+  <meta name="theme-color" content="#0b0f14">
+
   <style>
     :root{--bg:#0b0f14;--text:#e9eef7;--accent:#4f9cff;--muted:#a7b0be;--ok:#2ecc71;--bad:#ff5a5a;--warn:#f0c94b}
     *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:stretch;min-height:100vh;text-align:center}
     header{position:sticky;top:0;left:0;right:0;padding:16px 20px;background:rgba(11,15,20,.6);backdrop-filter:blur(8px);border-bottom:1px solid #1a2330;text-align:initial;z-index:10;width:100%}
     .header-inner{display:flex;align-items:center;justify-content:space-between;width:100%;margin:0}
-    .brand{font-weight:800;font-size:1.3rem}
+    .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.3rem}
+    .brand .logo{display:block;height:48px;width:auto}
     .userbar{display:flex;gap:12px;align-items:center;font-size:.95rem;color:var(--muted)}
     .pill{border:1px solid #2a3648;border-radius:999px;padding:6px 10px}
     .tiny{padding:8px 12px;font-size:.9rem}
     .secondary{background:#162232;color:var(--text);border:1px solid #29384f}
+
     main{width:min(980px,100%);margin:0 auto;padding:36px 16px}
     h1{margin:0 0 8px}
     .subtitle{color:var(--muted);margin-bottom:14px}
@@ -30,6 +39,7 @@
     .board{margin-top:28px;font-size:.95rem;color:var(--muted)}
     .board table{width:100%;border-collapse:collapse;margin-top:8px}
     .board th,.board td{padding:8px;border-bottom:1px solid #1a2330;text-align:left}
+
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px}
     .card{background:#10161d;border:1px solid #1a2330;border-radius:16px;max-width:520px;width:100%;padding:20px;text-align:left}
     .card h2{margin:0 0 6px;font-size:1.4rem}
@@ -41,7 +51,9 @@
 <body>
   <header>
     <div class="header-inner">
-      <div class="brand">Correlate!</div>
+      <div class="brand">
+        <img src="./assets/logo.svg" alt="Correlate!" class="logo">
+      </div>
       <div class="userbar">
         <span class="pill" id="userTag">Sin usuario</span>
         <span class="pill">⭐ <span id="scoreTag">0</span></span>
@@ -99,6 +111,6 @@
   </div>
 
   <!-- Arranque (rompe caché) -->
-  <script type="module" src="./src/main.js?v=42"></script>
+  <script type="module" src="./src/main.js?v=43"></script>
 </body>
 </html>

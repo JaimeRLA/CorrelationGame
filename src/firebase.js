@@ -1,6 +1,4 @@
-// src/firebase.js?v=42
-// Email/Password (email sintético), perfiles, leaderboard y bloqueo diario (plays/{canon}/{YYYY-MM-DD})
-
+// src/firebase.js?v=43
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
@@ -42,21 +40,18 @@ export function ensureAuth() {
   return new Promise((resolve) => onAuthStateChanged(auth, (u) => resolve(u || null)));
 }
 
-/* Asegurar username -> uid y perfil */
 async function ensureUsernameAndProfile({ uid, canon, display }) {
-  // username → uid (transacción)
   const unameRef = ref(db, `usernames/${canon}`);
   const txn = await runTransaction(unameRef, (curr) => {
     if (curr === null) return { uid, display: display.trim() };
     if (curr && curr.uid === uid) return { ...curr, display: display.trim() };
-    return; // otro dueño → abort
+    return;
   });
   if (!txn.committed && txn.snapshot.exists() && txn.snapshot.val().uid !== uid) {
     await signOut(auth).catch(()=>{});
     throw new Error("Ese nombre ya está en uso por otra cuenta.");
   }
 
-  // perfil
   const profRef = ref(db, `profiles/${canon}`);
   const snap = await get(profRef);
   if (!snap.exists()) {
@@ -70,7 +65,7 @@ async function ensureUsernameAndProfile({ uid, canon, display }) {
   return { uid, canon, display: display.trim() };
 }
 
-/* Registro: crea → si ya existe, login con esa pass */
+/* Registro */
 export async function registerUsername(display, password) {
   const canon = canonFromDisplay(display);
   if (!password || password.length < 6) throw new Error("Contraseña mínima de 6 caracteres.");
@@ -100,7 +95,7 @@ export async function registerUsername(display, password) {
   }
 }
 
-/* Login directo */
+/* Login */
 export async function loginUsername(display, password) {
   const canon = canonFromDisplay(display);
   if (!password || password.length < 6) throw new Error("Contraseña mínima de 6 caracteres.");
@@ -134,7 +129,7 @@ export async function loginUsername(display, password) {
   }
 }
 
-/* Compat con tu game.js antiguo */
+/* Compat con game.js antiguo */
 export async function createOrLoginUsername(display, passwordOptional) {
   let password = passwordOptional;
   if (!password && typeof document !== "undefined") {
