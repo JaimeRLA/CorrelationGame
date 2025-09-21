@@ -5,24 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Correlate! — Juego de asociaciones</title>
 
-  <!-- Favicon / Iconos -->
   <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
-  <link rel="icon" href="./favicon.ico"> <!-- opcional -->
-  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" sizes="180x180"> <!-- opcional -->
   <meta name="theme-color" content="#0b0f14">
 
   <style>
     :root{--bg:#0b0f14;--text:#e9eef7;--accent:#4f9cff;--muted:#a7b0be;--ok:#2ecc71;--bad:#ff5a5a;--warn:#f0c94b}
     *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:stretch;min-height:100vh;text-align:center}
+
     header{position:sticky;top:0;left:0;right:0;padding:16px 20px;background:rgba(11,15,20,.6);backdrop-filter:blur(8px);border-bottom:1px solid #1a2330;text-align:initial;z-index:10;width:100%}
     .header-inner{display:flex;align-items:center;justify-content:space-between;width:100%;margin:0}
     .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.3rem}
-    .brand .logo{display:block;height:48px;width:auto}
+    .brand .logo{display:block;height:36px;width:auto}
     .userbar{display:flex;gap:12px;align-items:center;font-size:.95rem;color:var(--muted)}
     .pill{border:1px solid #2a3648;border-radius:999px;padding:6px 10px}
-    .tiny{padding:8px 12px;font-size:.9rem}
     .secondary{background:#162232;color:var(--text);border:1px solid #29384f}
+    .tiny{padding:8px 12px;font-size:.9rem}
 
     main{width:min(980px,100%);margin:0 auto;padding:36px 16px}
     h1{margin:0 0 8px}
@@ -31,6 +29,7 @@
     .box{min-width:220px;min-height:150px;padding:20px;border-radius:16px;border:3px solid #2a3648;display:flex;align-items:center;justify-content:center;text-align:center;font-size:2rem}
     .box strong{font-size:2rem}
     .box input{all:unset;width:100%;height:100%;text-align:center;font-size:2rem}
+
     button{all:unset;cursor:pointer;background:var(--accent);color:#0b0f14;padding:14px 24px;border-radius:12px;font-weight:700;margin:8px;font-size:1.05rem}
     button[disabled]{opacity:.6;cursor:not-allowed}
     .stack{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
@@ -46,6 +45,28 @@
     .field{display:flex;gap:10px;margin-top:10px}
     .field input{flex:1;all:unset;background:#0f1620;border:1px solid #243246;border-radius:10px;padding:12px 14px;font-size:1rem;color:var(--text)}
     .helper{color:var(--muted);font-size:.9rem;margin-top:6px}
+
+    /* Responsive */
+    h1{font-size:clamp(22px, 3.8vw, 32px)}
+    .subtitle{font-size:clamp(14px, 2.6vw, 16px)}
+    .box strong,.box input{font-size:clamp(18px, 5.2vw, 32px)}
+    button{font-size:clamp(14px, 2.8vw, 17px);padding:12px 20px}
+    @media (max-width:768px){
+      .brand .logo{height:32px}
+      .row{gap:16px;margin:18px 0}
+      .box{min-width:180px;min-height:120px;padding:16px}
+    }
+    @media (max-width:480px){
+      header{padding:12px 14px}
+      .brand .logo{height:28px}
+      .userbar{gap:8px}
+      .pill{padding:4px 8px}
+      .row{gap:12px;margin:14px 0}
+      .box{min-width:140px;min-height:100px;padding:12px;border-width:2px}
+      .stack{gap:6px}
+      .stack button{min-width:46%;padding:12px}
+      #middleInput{padding:6px 2px}
+    }
   </style>
 </head>
 <body>
@@ -91,7 +112,7 @@
   </main>
 
   <!-- Modal de acceso -->
-  <div class="modal" id="userModal">
+  <div class="modal" id="userModal" style="display:none">
     <div class="card">
       <h2 id="authModeTitle">Acceso</h2>
       <div class="field" style="margin-top:10px">
@@ -103,6 +124,7 @@
       <div class="stack" style="margin-top:8px">
         <button id="loginBtn">Iniciar sesión</button>
         <button id="registerBtn" class="secondary">Crear cuenta</button>
+        <!-- compat con game.js antiguo -->
         <button id="createUserBtn" style="display:none">Entrar</button>
       </div>
       <div id="userError" class="msg bad" style="min-height:24px"></div>
@@ -110,7 +132,6 @@
     </div>
   </div>
 
-  <!-- Arranque (rompe caché) -->
-  <script type="module" src="./src/main.js?v=43"></script>
+  <script type="module" src="./src/main.js"></script>
 </body>
 </html>

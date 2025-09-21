@@ -1,54 +1,56 @@
-// src/game.js?v=43
-import { NODES, ANSWERS } from './config/levels.js?v=43';
+// src/game.js
+import { NODES, ANSWERS } from './config/levels.js';
 import {
   ensureAuth, getCurrentProfile, createOrLoginUsername,
   addScoreDaily, loadTop, getCooldownMs
-} from './firebase.js?v=43';
-import { els, showMsg, renderEndpoint, openModal, closeModal, renderBoard } from './ui.js?v=43';
+} from './firebase.js';
+import { els, showMsg, renderEndpoint, openModal, closeModal, renderBoard } from './ui.js';
 
 let edgeIndex = 0;
 let attemptsThisStep = 0;
-let sessionPoints = 0;
+let sessionPoints = 0;   // puntos de esta cadena (local)
+let baseScore = 0;       // puntos de BD al entrar
 
-function normalize(s){ return (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''); }
-function correctPoints(){ return attemptsThisStep === 0 ? 100 : 50; }
+const normalize = (s)=> (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+const correctPoints = ()=> attemptsThisStep === 0 ? 100 : 50;
+
+function updateHeaderScoreUI(){
+  if (els.scoreTag) els.scoreTag.textContent = String((baseScore||0) + (sessionPoints||0));
+}
 
 function loadStep(){
   renderEndpoint(els.startBox, NODES[edgeIndex]);
   renderEndpoint(els.endBox, NODES[edgeIndex+1]);
-  els.middleInput.value='';
+  if (els.middleInput) els.middleInput.value='';
   showMsg('', '');
   attemptsThisStep = 0;
-  els.middleInput.focus();
+  els.middleInput && els.middleInput.focus();
 }
 
 async function refreshProfileUI(){
   const p = await getCurrentProfile();
   if (p){
-    els.userTag.textContent = p.display;
-    els.scoreTag.textContent = String(p.score || 0);
+    if (els.userTag) els.userTag.textContent = p.display;
+    baseScore = Number(p.score||0);
+    updateHeaderScoreUI();
   }
 }
 
-async function refreshBoardSafe(){
-  try {
+async function refreshBoard(){
+  try{
     const rows = await loadTop(8);
     renderBoard(rows);
-  } catch (e) {
-    console.warn('Leaderboard error:', e);
-  }
+  }catch(e){ console.warn('Leaderboard error:', e); }
 }
 
 async function enforceDailyLock(){
   const remaining = await getCooldownMs();
   const locked = remaining > 0;
 
-  els.checkBtn.disabled = locked;
-  els.revealBtn.disabled = locked;
-  els.checkBtn.style.opacity = locked ? 0.6 : '';
-  els.revealBtn.style.opacity = locked ? 0.6 : '';
+  if (els.checkBtn)  { els.checkBtn.disabled = locked;  els.checkBtn.style.opacity  = locked? .6 : ''; }
+  if (els.revealBtn) { els.revealBtn.disabled = locked; els.revealBtn.style.opacity = locked? .6 : ''; }
 
-  if (locked) {
+  if (locked){
     const h = Math.floor(remaining/3600000);
     const m = Math.floor((remaining%3600000)/60000);
     const s = Math.floor((remaining%60000)/1000);
@@ -58,106 +60,103 @@ async function enforceDailyLock(){
 }
 
 async function check(){
-  const val = normalize(els.middleInput.value);
+  const val = normalize(els.middleInput?.value);
   if(!val){ showMsg('Escribe algo.','warn'); return; }
-
   if (await enforceDailyLock()) return;
 
   attemptsThisStep++;
-  if ((ANSWERS[edgeIndex] || []).map(normalize).includes(val)) {
-    const pts = correctPoints();
-    sessionPoints += pts;
-    showMsg(`¡Correcto! +${pts} puntos 🎉`, 'ok');
+  const ok = (ANSWERS[edgeIndex]||[]).map(normalize).includes(val);
+  if (!ok){ showMsg('No es correcto.','bad'); return; }
 
-    if (edgeIndex < NODES.length - 2) {
-      setTimeout(()=>{ edgeIndex++; loadStep(); }, 900);
-    } else {
-      try {
-        await addScoreDaily(sessionPoints);
-        await refreshProfileUI();
-        await refreshBoardSafe();
-        await enforceDailyLock();
-        showMsg('🎉 ¡Cadena completa!', 'ok');
-      } catch (e) {
-        const msg = String(e?.message || e);
-        if (msg.includes('Ya jugaste hoy')) {
-          showMsg('⏳ Ya jugaste hoy. Vuelve mañana.', 'warn');
-          await enforceDailyLock();
-        } else {
-          showMsg('Error al guardar la puntuación.', 'bad');
-          console.warn(e);
-        }
-      }
-      endGame();
-    }
-  } else {
-    showMsg('No es correcto.','bad');
+  const pts = correctPoints();
+  sessionPoints += pts;
+  updateHeaderScoreUI(); // 🔹 sube marcador ya
+  showMsg(`¡Correcto! +${pts} puntos 🎉`, 'ok');
+
+  if (edgeIndex < NODES.length - 2){
+    setTimeout(()=>{ edgeIndex++; loadStep(); }, 900);
+    return;
   }
+
+  // fin de cadena -> persistir y bloquear el día
+  try{
+    await addScoreDaily(sessionPoints);
+    baseScore += sessionPoints;
+    sessionPoints = 0;
+    updateHeaderScoreUI();
+    await refreshBoard();
+    await enforceDailyLock();
+    showMsg('🎉 ¡Cadena completa!', 'ok');
+  }catch(e){
+    const msg = String(e?.message || e);
+    if (msg.includes('Ya jugaste hoy')){
+      showMsg('⏳ Ya jugaste hoy. Vuelve mañana.', 'warn');
+      await enforceDailyLock();
+    } else {
+      showMsg('Error al guardar la puntuación.', 'bad');
+      console.warn(e);
+    }
+  }
+  endGame();
 }
 
 async function reveal(){
-  els.middleInput.value = (ANSWERS[edgeIndex]||[])[0] || '';
-  if (edgeIndex < NODES.length-2) {
+  const ans = (ANSWERS[edgeIndex]||[])[0] || '';
+  if (els.middleInput) els.middleInput.value = ans;
+
+  if (edgeIndex < NODES.length-2){
     showMsg('Solución mostrada (0 puntos).','warn');
     setTimeout(()=>{ edgeIndex++; loadStep(); }, 900);
-  } else {
-    try {
-      await addScoreDaily(0);
-      await enforceDailyLock();
-      showMsg('Solución mostrada (0 puntos). 🎉 Cadena completa','warn');
-    } catch (e) {
-      const msg = String(e?.message || e);
-      if (msg.includes('Ya jugaste hoy')) {
-        showMsg('⏳ Ya jugaste hoy. Vuelve mañana.', 'warn');
-        await enforceDailyLock();
-      } else {
-        showMsg('Error al registrar la partida.', 'bad');
-        console.warn(e);
-      }
-    }
-    endGame();
+    return;
   }
+
+  try{
+    await addScoreDaily(0);
+    await enforceDailyLock();
+    showMsg('Solución mostrada (0 puntos). 🎉 Cadena completa','warn');
+  }catch(e){
+    const msg = String(e?.message || e);
+    if (msg.includes('Ya jugaste hoy')){
+      showMsg('⏳ Ya jugaste hoy. Vuelve mañana.', 'warn');
+      await enforceDailyLock();
+    } else {
+      showMsg('Error al registrar la partida.', 'bad');
+      console.warn(e);
+    }
+  }
+  endGame();
 }
 
 function endGame(){
-  els.gameRow.style.display='none';
-  els.checkBtn.style.display='none';
-  els.revealBtn.style.display='none';
+  if (els.gameRow) els.gameRow.style.display='none';
+  if (els.checkBtn) els.checkBtn.style.display='none';
+  if (els.revealBtn) els.revealBtn.style.display='none';
+}
+
+export async function startAfterAuth(){
+  await refreshProfileUI();
+  await refreshBoard();
+  edgeIndex = 0;
+  sessionPoints = 0;
+  loadStep();
+  await enforceDailyLock();
 }
 
 export async function initGame(){
-  console.log('GAME v43 loaded');
+  if (els.checkBtn)  els.checkBtn.onclick  = ()=>{ check().catch(err=>showMsg(err.message,'bad')); };
+  if (els.revealBtn) els.revealBtn.onclick = ()=>{ reveal().catch(err=>showMsg(err.message,'bad')); };
+  els.middleInput && els.middleInput.addEventListener('keydown', e=>{ if(e.key==='Enter') check(); });
 
-  els.checkBtn.onclick = ()=>{ check().catch(err=>showMsg(err.message,'bad')); };
-  els.revealBtn.onclick = ()=>{ reveal().catch(err=>showMsg(err.message,'bad')); };
-  els.middleInput.addEventListener('keydown', e=>{ if(e.key==='Enter') check(); });
-
-  els.switchBtn.onclick = ()=> openModal();
-  els.createUserBtn.onclick = async ()=>{
+  // compat botón oculto del modal
+  if (els.createUserBtn) els.createUserBtn.onclick = async ()=>{
     try{
-      await createOrLoginUsername(els.userInput.value);
+      await createOrLoginUsername(els.userInput?.value);
       closeModal();
-      await refreshProfileUI();
-      await refreshBoardSafe();
-      edgeIndex = 0;
-      sessionPoints = 0;
-      loadStep();
-      await enforceDailyLock();
-    } catch(e){
-      els.userError.textContent = e.message || 'Error creando usuario';
-    }
+      await startAfterAuth();
+    }catch(e){ if (els.userError) els.userError.textContent = e.message || 'Error creando usuario'; }
   };
 
   await ensureAuth();
-  const profile = await getCurrentProfile();
-  if (!profile) {
-    // el modal lo abre main.js con los botones del header
-  } else {
-    await refreshProfileUI();
-    edgeIndex = 0;
-    sessionPoints = 0;
-    loadStep();
-  }
-  await refreshBoardSafe();
-  await enforceDailyLock();
+  const p = await getCurrentProfile();
+  if (p) await startAfterAuth(); // si ya hay sesión
 }

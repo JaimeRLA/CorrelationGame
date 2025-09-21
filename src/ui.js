@@ -1,83 +1,92 @@
-// src/ui.js?v=43
-const $ = (id) => document.getElementById(id);
-
+// src/ui.js
 export const els = {
-  // juego
-  startBox: $('startBox'),
-  endBox: $('endBox'),
-  middleInput: $('middleInput'),
-  msgEl: $('message'),
-  gameRow: $('gameRow'),
-  checkBtn: $('checkBtn'),
-  revealBtn: $('revealBtn'),
+  get startBox(){ return document.getElementById('startBox'); },
+  get endBox(){ return document.getElementById('endBox'); },
+  get middleInput(){ return document.getElementById('middleInput'); },
+  get msgEl(){ return document.getElementById('message'); },
+  get userTag(){ return document.getElementById('userTag'); },
+  get scoreTag(){ return document.getElementById('scoreTag'); },
+  get switchBtn(){ return document.getElementById('switchBtn'); },
+  get loginHeaderBtn(){ return document.getElementById('loginHeaderBtn'); },
+  get registerHeaderBtn(){ return document.getElementById('registerHeaderBtn'); },
 
-  // header
-  userTag: $('userTag'),
-  scoreTag: $('scoreTag'),
-  loginHeaderBtn: $('loginHeaderBtn'),
-  registerHeaderBtn: $('registerHeaderBtn'),
-  switchBtn: $('switchBtn'),
+  get modal(){ return document.getElementById('userModal'); },
+  get authModeTitle(){ return document.getElementById('authModeTitle'); },
+  get authHelper(){ return document.getElementById('authHelper'); },
+  get userInput(){ return document.getElementById('userInput'); },
+  get passInput(){ return document.getElementById('passInput'); },
+  get loginBtn(){ return document.getElementById('loginBtn'); },
+  get registerBtn(){ return document.getElementById('registerBtn'); },
 
-  // modal
-  modal: $('userModal'),
-  authModeTitle: $('authModeTitle'),
-  authHelper: $('authHelper'),
-  userInput: $('userInput'),
-  passInput: $('passInput'),
-  loginBtn: $('loginBtn'),
-  registerBtn: $('registerBtn'),
-  createUserBtn: $('createUserBtn'),
-  userError: $('userError'),
+  // compat
+  get createUserBtn(){ return document.getElementById('createUserBtn'); },
+  get userError(){ return document.getElementById('userError'); },
 
-  // leaderboard
-  boardBody: $('boardBody'),
+  get boardBody(){ return document.getElementById('boardBody'); },
+  get gameRow(){ return document.getElementById('gameRow'); },
+  get checkBtn(){ return document.getElementById('checkBtn'); },
+  get revealBtn(){ return document.getElementById('revealBtn'); },
 };
 
 export function showMsg(text, kind='') {
-  els.msgEl.textContent = text;
-  els.msgEl.className = 'msg ' + kind;
+  const el = els.msgEl;
+  if (!el) return;
+  el.textContent = text;
+  el.className = 'msg ' + kind;
 }
 
 export function renderEndpoint(container, node){
+  if (!container) return;
   container.innerHTML = '';
-  if(node.type==='text'){
-    const span=document.createElement('strong');
-    span.textContent=node.value;
+  if (node.type === 'text') {
+    const span = document.createElement('strong');
+    span.textContent = node.value;
     container.appendChild(span);
-  } else if(node.type==='image'){
-    const img=document.createElement('img');
-    img.src=node.src; img.alt=node.alt||'Imagen';
-    img.style.maxWidth='100%'; img.style.maxHeight='100px';
+  } else if (node.type === 'image') {
+    const img = document.createElement('img');
+    img.src = node.src; img.alt = node.alt || 'Imagen';
+    img.style.maxWidth = '100%'; img.style.maxHeight = '100px';
     container.appendChild(img);
   }
 }
 
-export function setAuthMode(mode){
-  if (mode === 'register') {
-    els.authModeTitle.textContent = 'Crear cuenta';
-    els.loginBtn.style.display = 'none';
-    els.registerBtn.style.display = '';
-    els.authHelper.textContent = 'El usuario debe ser único. Contraseña mínima de 6 caracteres.';
-  } else {
-    els.authModeTitle.textContent = 'Iniciar sesión';
-    els.loginBtn.style.display = '';
-    els.registerBtn.style.display = 'none';
-    els.authHelper.textContent = 'Introduce tu usuario y contraseña para entrar.';
-  }
-}
-
 export function openModal(){
-  els.modal.style.display='flex';
-  setTimeout(()=> els.userInput?.focus(), 0);
+  const m = els.modal;
+  if (!m) return;
+  m.style.display='flex';
+  setTimeout(()=> els.userInput && els.userInput.focus(), 0);
 }
 export function closeModal(){
-  els.modal.style.display='none';
+  const m = els.modal;
+  if (!m) return;
+  m.style.display='none';
   if (els.userInput) els.userInput.value='';
   if (els.passInput) els.passInput.value='';
   if (els.userError) els.userError.textContent='';
 }
 
 export function renderBoard(rows){
-  els.boardBody.innerHTML = rows.map(r=>`<tr><td>${r.display}</td><td>${r.score}</td></tr>`).join('')
+  const body = els.boardBody;
+  if (!body) return;
+  body.innerHTML = rows.map(r=>`<tr><td>${r.display}</td><td>${r.score}</td></tr>`).join('')
     || '<tr><td colspan="2">Aún no hay puntuaciones</td></tr>';
+}
+
+export function setAuthMode(mode){
+  // mode: 'login' | 'register'
+  const t = els.authModeTitle, h = els.authHelper;
+  if (!t || !h) return;
+  if (mode === 'register'){
+    t.textContent = 'Crear cuenta';
+    h.textContent = 'Elige un nombre único (no distingue mayúsculas) y una contraseña de 6+ caracteres.';
+  } else {
+    t.textContent = 'Iniciar sesión';
+    h.textContent = 'Introduce tu usuario y contraseña para entrar.';
+  }
+}
+
+export function setHeaderAuthState(loggedIn){
+  if (els.loginHeaderBtn)    els.loginHeaderBtn.style.display    = loggedIn ? 'none' : '';
+  if (els.registerHeaderBtn) els.registerHeaderBtn.style.display = loggedIn ? 'none' : '';
+  if (els.switchBtn)         els.switchBtn.style.display         = loggedIn ? '' : 'none';
 }

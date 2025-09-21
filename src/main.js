@@ -1,52 +1,65 @@
-// src/main.js?v=43
-import { initGame } from './game.js?v=43';
-import { els, setAuthMode, openModal, closeModal, renderBoard } from './ui.js?v=43';
-import { loginUsername, registerUsername, getCurrentProfile, loadTop } from './firebase.js?v=43';
+// src/main.js
+import { initGame, startAfterAuth } from './game.js';
+import { els, openModal, closeModal, setAuthMode, setHeaderAuthState } from './ui.js';
+import {
+  ensureAuth, getCurrentProfile,
+  registerUsername, loginUsername, signOutUser
+} from './firebase.js';
 
-window.addEventListener('DOMContentLoaded', async () => {
-  await initGame().catch(err => console.error('Init error:', err));
+async function refreshHeaderAuth(){
+  const u = await ensureAuth();
+  const profile = await getCurrentProfile();
+  setHeaderAuthState(!!(u && profile));
+  if (profile && els.userTag) els.userTag.textContent = profile.display || '—';
+}
 
-  // Header → abrir modal en cada modo
-  els.loginHeaderBtn?.addEventListener('click', () => { setAuthMode('login'); openModal(); });
-  els.registerHeaderBtn?.addEventListener('click', () => { setAuthMode('register'); openModal(); });
+function wireHeader(){
+  if (els.loginHeaderBtn){
+    els.loginHeaderBtn.onclick = ()=>{ setAuthMode('login'); openModal(); };
+  }
+  if (els.registerHeaderBtn){
+    els.registerHeaderBtn.onclick = ()=>{ setAuthMode('register'); openModal(); };
+  }
+  if (els.switchBtn){
+    els.switchBtn.onclick = async ()=>{
+      await signOutUser().catch(()=>{});
+      setHeaderAuthState(false);
+      setAuthMode('login');
+      openModal();
+    };
+  }
+}
 
-  // Modal → acciones
-  els.loginBtn?.addEventListener('click', async () => {
-    try {
-      await loginUsername(els.userInput?.value || '', els.passInput?.value || '');
-      closeModal();
-      location.reload();
-    } catch (e) {
-      if (els.userError) els.userError.textContent = e.message || 'No se pudo iniciar sesión';
-    }
-  });
-  els.registerBtn?.addEventListener('click', async () => {
-    try {
-      await registerUsername(els.userInput?.value || '', els.passInput?.value || '');
-      closeModal();
-      location.reload();
-    } catch (e) {
-      if (els.userError) els.userError.textContent = e.message || 'No se pudo crear la cuenta';
-    }
-  });
+function wireModal(){
+  if (els.loginBtn){
+    els.loginBtn.onclick = async ()=>{
+      try{
+        const name = els.userInput?.value || '';
+        const pass = els.passInput?.value || '';
+        await loginUsername(name, pass);
+        closeModal();
+        await startAfterAuth();
+        await refreshHeaderAuth();
+      }catch(e){ if (els.userError) els.userError.textContent = e.message || 'Error al iniciar sesión'; }
+    };
+  }
+  if (els.registerBtn){
+    els.registerBtn.onclick = async ()=>{
+      try{
+        const name = els.userInput?.value || '';
+        const pass = els.passInput?.value || '';
+        await registerUsername(name, pass);
+        closeModal();
+        await startAfterAuth();
+        await refreshHeaderAuth();
+      }catch(e){ if (els.userError) els.userError.textContent = e.message || 'Error al crear cuenta'; }
+    };
+  }
+}
 
-  // Enter = acción visible
-  els.passInput?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      const loginVisible = els.loginBtn && els.loginBtn.style.display !== 'none';
-      (loginVisible ? els.loginBtn : els.registerBtn)?.click();
-    }
-  });
-
-  // Si ya hay perfil, cierra modal
-  try {
-    const p = await getCurrentProfile();
-    if (p) closeModal();
-  } catch {}
-
-  // Carga leaderboard (defensivo)
-  try {
-    const rows = await loadTop(8);
-    renderBoard(rows);
-  } catch {}
+window.addEventListener('DOMContentLoaded', async ()=>{
+  wireHeader();
+  wireModal();
+  await initGame();          // arranca el juego (si ya hay sesión, entra solo)
+  await refreshHeaderAuth(); // muestra/oculta botones de cabecera correctos
 });
