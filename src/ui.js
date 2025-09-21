@@ -1,20 +1,36 @@
-// src/ui.js
+// src/ui.js?v=42
+const $ = (id) => document.getElementById(id);
+
 export const els = {
-  startBox: document.getElementById('startBox'),
-  endBox: document.getElementById('endBox'),
-  middleInput: document.getElementById('middleInput'),
-  msgEl: document.getElementById('message'),
-  userTag: document.getElementById('userTag'),
-  scoreTag: document.getElementById('scoreTag'),
-  switchBtn: document.getElementById('switchBtn'),
-  modal: document.getElementById('userModal'),
-  userInput: document.getElementById('userInput'),
-  createUserBtn: document.getElementById('createUserBtn'),
-  userError: document.getElementById('userError'),
-  boardBody: document.getElementById('boardBody'),
-  gameRow: document.getElementById('gameRow'),
-  checkBtn: document.getElementById('checkBtn'),
-  revealBtn: document.getElementById('revealBtn'),
+  // juego
+  startBox: $('startBox'),
+  endBox: $('endBox'),
+  middleInput: $('middleInput'),
+  msgEl: $('message'),
+  gameRow: $('gameRow'),
+  checkBtn: $('checkBtn'),
+  revealBtn: $('revealBtn'),
+
+  // header
+  userTag: $('userTag'),
+  scoreTag: $('scoreTag'),
+  loginHeaderBtn: $('loginHeaderBtn'),
+  registerHeaderBtn: $('registerHeaderBtn'),
+  switchBtn: $('switchBtn'),
+
+  // modal
+  modal: $('userModal'),
+  authModeTitle: $('authModeTitle'),
+  authHelper: $('authHelper'),
+  userInput: $('userInput'),
+  passInput: $('passInput'),
+  loginBtn: $('loginBtn'),
+  registerBtn: $('registerBtn'),
+  createUserBtn: $('createUserBtn'),
+  userError: $('userError'),
+
+  // leaderboard
+  boardBody: $('boardBody'),
 };
 
 export function showMsg(text, kind='') {
@@ -36,14 +52,29 @@ export function renderEndpoint(container, node){
   }
 }
 
+export function setAuthMode(mode){
+  if (mode === 'register') {
+    els.authModeTitle.textContent = 'Crear cuenta';
+    els.loginBtn.style.display = 'none';
+    els.registerBtn.style.display = '';
+    els.authHelper.textContent = 'El usuario debe ser único. Contraseña mínima de 6 caracteres.';
+  } else {
+    els.authModeTitle.textContent = 'Iniciar sesión';
+    els.loginBtn.style.display = '';
+    els.registerBtn.style.display = 'none';
+    els.authHelper.textContent = 'Introduce tu usuario y contraseña para entrar.';
+  }
+}
+
 export function openModal(){
   els.modal.style.display='flex';
-  setTimeout(()=> els.userInput.focus(), 0);
+  setTimeout(()=> els.userInput?.focus(), 0);
 }
 export function closeModal(){
   els.modal.style.display='none';
-  els.userInput.value='';
-  els.userError.textContent='';
+  if (els.userInput) els.userInput.value='';
+  if (els.passInput) els.passInput.value='';
+  if (els.userError) els.userError.textContent='';
 }
 
 export function renderBoard(rows){

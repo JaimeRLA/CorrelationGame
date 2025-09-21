@@ -1,12 +1,12 @@
-// src/game.js
+// src/game.js?v=42
 // Lógica del juego + UI con bloqueo diario al completar la cadena.
 
-import { NODES, ANSWERS } from './config/levels.js';
+import { NODES, ANSWERS } from './config/levels.js?v=42';
 import {
   ensureAuth, getCurrentProfile, createOrLoginUsername,
   addScoreDaily, loadTop, getCooldownMs
-} from './firebase.js';
-import { els, showMsg, renderEndpoint, openModal, closeModal, renderBoard } from './ui.js';
+} from './firebase.js?v=42';
+import { els, showMsg, renderEndpoint, openModal, closeModal, renderBoard } from './ui.js?v=42';
 
 let edgeIndex = 0;
 let attemptsThisStep = 0;
@@ -36,7 +36,7 @@ async function refreshProfileUI(){
 }
 
 // Leaderboard
-async function refreshBoard(){
+async function refreshBoardSafe(){
   try {
     const rows = await loadTop(8);
     renderBoard(rows);
@@ -83,7 +83,7 @@ async function check(){
       try {
         await addScoreDaily(sessionPoints);  // ✔️ Marca el día + suma puntos
         await refreshProfileUI();
-        await refreshBoard();
+        await refreshBoardSafe();
         await enforceDailyLock();
         showMsg('🎉 ¡Cadena completa!', 'ok');
       } catch (e) {
@@ -138,18 +138,21 @@ function endGame(){
 
 // Init
 export async function initGame(){
+  console.log('GAME v42 loaded');
+
   // Listeners
   els.checkBtn.onclick = ()=>{ check().catch(err=>showMsg(err.message,'bad')); };
   els.revealBtn.onclick = ()=>{ reveal().catch(err=>showMsg(err.message,'bad')); };
   els.middleInput.addEventListener('keydown', e=>{ if(e.key==='Enter') check(); });
 
+  // Compat (no se usan, pero no rompen)
   els.switchBtn.onclick = ()=> openModal();
   els.createUserBtn.onclick = async ()=>{
     try{
       await createOrLoginUsername(els.userInput.value);
       closeModal();
       await refreshProfileUI();
-      await refreshBoard();
+      await refreshBoardSafe();
       edgeIndex = 0;
       sessionPoints = 0;
       loadStep();
@@ -162,13 +165,13 @@ export async function initGame(){
   await ensureAuth();
   const profile = await getCurrentProfile();
   if (!profile) {
-    openModal();
+    // El modal lo abre main.js cuando pulses Iniciar/Crear
   } else {
     await refreshProfileUI();
     edgeIndex = 0;
     sessionPoints = 0;
     loadStep();
   }
-  await refreshBoard();
+  await refreshBoardSafe();
   await enforceDailyLock();
 }
