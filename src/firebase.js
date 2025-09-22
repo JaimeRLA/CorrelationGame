@@ -1,5 +1,3 @@
-// src/firebase.js
-// Email/Password + RTDB: usernames/{canon} -> {uid,display}, profiles/{canon}, plays/{canon}/{YYYY-MM-DD}
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-app.js";
 import {
   getAuth, onAuthStateChanged,
@@ -59,7 +57,7 @@ export async function registerUsername(display, password){
   const txn = await runTransaction(unameRef, curr=>{
     if (curr === null) return { uid, display: display.trim() };
     if (curr.uid === uid) return { ...curr, display: display.trim() };
-    return; // ocupado
+    return;
   });
   if (!txn.committed && txn.snapshot.exists() && txn.snapshot.val().uid !== uid) {
     await signOut(auth).catch(()=>{});
@@ -67,7 +65,7 @@ export async function registerUsername(display, password){
   }
 
   const profRef = ref(db, `profiles/${canon}`);
-  await set(profRef, { display: display.trim(), score: 0, created: Date.now() });
+  await set(profRef, { display: display.trim(), score: 0, created: Date.now(), streak: 0, lastPlay: "" });
 
   await set(ref(db, `accounts/${uid}`), { canon, display: display.trim() });
 
@@ -92,7 +90,6 @@ export async function loginUsername(display, password){
   return { uid, canon };
 }
 
-/* compat: botón antiguo si existiera */
 export async function createOrLoginUsername(display){
   const pass = (typeof document!=='undefined' && document.getElementById('passInput')?.value) || '';
   const canon = canonFromDisplay(display);
@@ -118,7 +115,7 @@ export async function getCurrentProfile(){
   return snap.exists() ? { canon, ...snap.val() } : null;
 }
 
-/* ===== leaderboard con fallback ===== */
+/* ===== leaderboard ===== */
 export async function loadTop(n = 10) {
   try {
     const q = query(ref(db, "profiles"), orderByChild("score"), limitToLast(n));
@@ -139,7 +136,11 @@ export async function loadTop(n = 10) {
   return rows.slice(0, n);
 }
 
-/* ===== bloqueo diario (UTC) ===== */
+/* ===== streak / multipliers ===== */
+export function calcMultiplier(days){
+  const extra = Math.min(Math.max(days - 1, 0) * 0.1, 1.0);
+  return 1.0 + extra;
+}
 function todayKeyUTC(){
   const d = new Date();
   const yyyy = d.getUTCFullYear();
@@ -147,11 +148,20 @@ function todayKeyUTC(){
   const dd = String(d.getUTCDate()).padStart(2,'0');
   return `${yyyy}-${mm}-${dd}`;
 }
+function yesterdayKeyUTC(){
+  const now = new Date();
+  const y = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()-1, 0,0,0,0));
+  const yyyy = y.getUTCFullYear();
+  const mm = String(y.getUTCMonth()+1).padStart(2,'0');
+  const dd = String(y.getUTCDate()).padStart(2,'0');
+  return `${yyyy}-${mm}-${dd}`;
+}
 function msUntilNextUtcMidnight(){
   const now = new Date();
   const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()+1, 0,0,0,0));
   return next - now;
 }
+
 export async function getCooldownMs(){
   const canon = getCurrentCanon();
   if (!canon) return 0;
@@ -159,12 +169,24 @@ export async function getCooldownMs(){
   return snap.exists() ? msUntilNextUtcMidnight() : 0;
 }
 
-/* ===== suma diaria: devuelve el score NUEVO desde BD ===== */
+export async function getStreakInfo(){
+  const canon = getCurrentCanon();
+  if (!canon) return { days: 0, mult: 1.0 };
+  const profSnap = await get(ref(db, `profiles/${canon}`));
+  const days = Number(profSnap.val()?.streak || 0);
+  const mult = calcMultiplier(days || 0);
+  return { days, mult };
+}
+
+/* ===== suma diaria con racha ===== */
 export async function addScoreDaily(delta){
   const canon = getCurrentCanon();
   if (!canon) throw new Error('No hay usuario activo.');
 
-  const playRef = ref(db, `plays/${canon}/${todayKeyUTC()}`);
+  const today = todayKeyUTC();
+  const yday  = yesterdayKeyUTC();
+
+  const playRef = ref(db, `plays/${canon}/${today}`);
   const already = await get(playRef);
   if (already.exists()) throw new Error(' Ya jugaste hoy. Vuelve mañana.');
 
@@ -172,10 +194,22 @@ export async function addScoreDaily(delta){
 
   const profRef = ref(db, `profiles/${canon}`);
   let newScore = 0;
-  const res = await runTransaction(profRef, curr=>{
+
+  const res = await runTransaction(profRef, curr => {
     if (!curr) return curr;
-    const s = (curr.score || 0) + (Number(delta) || 0);
-    return { ...curr, score: s };
+
+    const hadYesterday = !!(curr.lastPlay === yday);
+    const lastPlay = today;
+    const prevStreak = Number(curr.streak || 0);
+    const nextStreak = hadYesterday ? Math.min(prevStreak + 1, 365) : 1;
+
+    const mult = calcMultiplier(nextStreak);
+    const deltaNum = Number(delta) || 0;
+    const awarded = Math.round(deltaNum * mult);
+
+    const s = (Number(curr.score || 0)) + awarded;
+
+    return { ...curr, score: s, streak: nextStreak, lastPlay };
   });
 
   if (res.committed && res.snapshot.exists()) {

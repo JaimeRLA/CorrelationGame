@@ -10,6 +10,7 @@ export const els = {
   // Header
   userTag:    document.getElementById('userTag'),
   scoreTag:   document.getElementById('scoreTag'),
+  streakTag:  document.getElementById('streakTag'), // NUEVO
   btnLogin:   document.getElementById('btnLogin'),
   btnRegister:document.getElementById('btnRegister'),
   // Compat (no se usa, pero lo dejamos)
@@ -74,4 +75,10 @@ export function renderBoard(rows){
   els.boardBody.innerHTML = rows && rows.length
     ? rows.map(r=>`<tr><td>${r.display}</td><td>${r.score}</td></tr>`).join('')
     : '<tr><td colspan="2">Aún no hay puntuaciones</td></tr>';
+}
+
+// NUEVO: pintar racha
+export function renderStreak({ days = 0, mult = 1.0 } = {}){
+  if (!els.streakTag) return;
+  els.streakTag.textContent = `🔥 Racha x${mult.toFixed(1)} (${days} día${days===1?'':'s'})`;
 }

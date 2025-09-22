@@ -1,14 +1,13 @@
-// src/game.js
 import { NODES, ANSWERS } from './config/levels.js';
 import {
-  ensureAuth, getCurrentProfile, addScoreDaily, loadTop, getCooldownMs
+  ensureAuth, getCurrentProfile, addScoreDaily, loadTop, getCooldownMs, getStreakInfo
 } from './firebase.js';
-import { els, showMsg, renderEndpoint, renderBoard } from './ui.js';
+import { els, showMsg, renderEndpoint, renderBoard, renderStreak } from './ui.js';
 
 let edgeIndex = 0;
 let attemptsThisStep = 0;
-let sessionPoints = 0;   // puntos de esta cadena (local)
-let baseScore = 0;       // puntos de BD
+let sessionPoints = 0;
+let baseScore = 0;
 
 const normalize = (s)=> (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const correctPoints = ()=> attemptsThisStep === 0 ? 100 : 50;
@@ -32,6 +31,10 @@ async function refreshProfileUI(){
     els.userTag && (els.userTag.textContent = p.display);
     baseScore = Number(p.score||0);
     updateHeaderScoreUI();
+    try{
+      const info = await getStreakInfo();
+      renderStreak(info);
+    }catch{}
   }
 }
 
@@ -78,14 +81,15 @@ async function check(){
   }
 
   try{
-    const newScore = await addScoreDaily(sessionPoints); // score real BD
+    const newScore = await addScoreDaily(sessionPoints);
     baseScore = newScore;
     sessionPoints = 0;
     updateHeaderScoreUI();
-    // pequeño delay para evitar cachés intermedias en lecturas consecutivas
     await new Promise(r=>setTimeout(r, 120));
     await refreshBoard();
     await enforceDailyLock();
+    const info = await getStreakInfo();
+    renderStreak(info);
     showMsg(' ¡Cadena completa!', 'ok');
   }catch(e){
     const msg = String(e?.message || e);
@@ -100,28 +104,26 @@ async function check(){
   endGame();
 }
 
-// Mostrar solución y avanzar
 async function reveal(){
   const ans = (ANSWERS[edgeIndex]||[])[0] || '';
   els.middleInput && (els.middleInput.value = ans);
 
-  // Si NO es el último paso: revelar este paso (vale 0) y pasar al siguiente.
   if (edgeIndex < NODES.length - 2){
     showMsg('Solución mostrada (0 puntos en este paso).','warn');
     setTimeout(()=>{ edgeIndex++; loadStep(); }, 900);
     return;
   }
 
-  // Si ES el último paso:
-  // Guardamos los puntos acumulados en toda la cadena (sessionPoints), SIN sumar nada por este último paso revelado.
   try{
-    const newScore = await addScoreDaily(sessionPoints);  //  antes ponía 0
+    const newScore = await addScoreDaily(sessionPoints);
     baseScore = newScore;
     sessionPoints = 0;
     updateHeaderScoreUI();
     await new Promise(r=>setTimeout(r, 120));
     await refreshBoard();
     await enforceDailyLock();
+    const info = await getStreakInfo();
+    renderStreak(info);
     showMsg('Solución mostrada (0 en este paso). Puntos anteriores guardados y cadena completa','warn');
   }catch(e){
     const msg = String(e?.message || e);
@@ -142,7 +144,6 @@ function endGame(){
   els.revealBtn && (els.revealBtn.style.display='none');
 }
 
-// APIs para main.js
 export async function startAfterAuth(){
   await refreshProfileUI();
   await refreshBoard();
@@ -159,5 +160,5 @@ export async function initGame(){
 
   await ensureAuth();
   const p = await getCurrentProfile();
-  if (p) await startAfterAuth(); // si ya estaba logueado
+  if (p) await startAfterAuth();
 }

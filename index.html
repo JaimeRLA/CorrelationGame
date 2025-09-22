@@ -3,14 +3,12 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Correlate! — Association Game</title>
-  <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Correlate! — Cadena</title>
-  <!-- AdSense: incluye solo una vez -->
+  <title>Correlate! — Game</title>
+
+  <!-- AdSense (incluye solo una vez) -->
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9214440320012565"
           crossorigin="anonymous"></script>
+
   <style>
     :root{--bg:#0b0f14;--text:#e9eef7;--accent:#4f9cff;--muted:#a7b0be;--ok:#2ecc71;--bad:#ff5a5a;--warn:#f0c94b}
     *{box-sizing:border-box}
@@ -19,13 +17,12 @@
     .header-inner{display:flex;align-items:center;justify-content:space-between;width:100%;margin:0}
     .brand{font-weight:800;font-size:1.3rem;display:flex;align-items:center;gap:8px}
     .brand img.logo{height:40px;vertical-align:middle}
-    .userbar{display:flex;gap:30px;align-items:center;font-size:.95rem;color:var(--muted)}
+    .userbar{display:flex;gap:20px;align-items:center;font-size:.95rem;color:var(--muted)}
     .pill{border:1px solid #2a3648;border-radius:999px;padding:6px 10px}
     .btn{all:unset;cursor:pointer;background:var(--accent);color:#0b0f14;padding:10px 14px;border-radius:10px;font-weight:700}
     .btn.secondary{background:#162232;color:var(--text);border:1px solid #29384f}
     main{width:min(980px,100%);margin:0 auto;padding:36px 16px}
-    h1{margin:0 0 8px;
-    font-size: 48px;}
+    h1{margin:0 0 8px}
     .subtitle{color:var(--muted);margin-bottom:14px}
     .row{display:flex;align-items:center;justify-content:center;gap:24px;margin:24px 0;flex-wrap:wrap}
     .box{min-width:220px;min-height:150px;padding:20px;border-radius:16px;border:3px solid #2a3648;display:flex;align-items:center;justify-content:center;text-align:center;font-size:2rem}
@@ -56,10 +53,12 @@
       <div class="userbar">
         <span class="pill" id="userTag">Sin usuario</span>
         <span class="pill">⭐ <span id="scoreTag">0</span></span>
-        <!-- Nuevo: botones explícitos -->
+        <!-- NUEVO: indicador de racha -->
+        <span class="pill" id="streakTag">🔥 Racha x1.0 (0 días)</span>
+        <!-- Auth -->
         <button class="btn secondary" id="btnLogin">Iniciar sesión</button>
         <button class="btn" id="btnRegister">Crear usuario</button>
-        <!-- Conservamos el antiguo switchBtn por compatibilidad (no se usa) -->
+        <!-- Compat (no se usa) -->
         <button class="btn secondary" id="switchBtn" style="display:none">Cambiar usuario</button>
       </div>
     </div>
