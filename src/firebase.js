@@ -8,7 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-auth.js";
 import {
   getDatabase, ref, get, set, update, runTransaction,
-  query, orderByChild, limitToLast, serverTimestamp
+  query, orderByChild, limitToLast
 } from "https://www.gstatic.com/firebasejs/10.12.3/firebase-database.js";
 
 /* ==== TU CONFIG ==== */
@@ -39,42 +39,36 @@ const emailFor = (canon)=> `${canon}@correlationsgame.local`;
 const setLocalCanon = (canon)=> localStorage.setItem("canon", canon);
 export const getCurrentCanon = ()=> localStorage.getItem("canon") || null;
 
-/* ===== auth base ===== */
+/* ===== auth ===== */
 export function ensureAuth(){
   return new Promise(resolve => onAuthStateChanged(auth, u=> resolve(u || null)));
 }
 
-/* ===== registro / login separados ===== */
 export async function registerUsername(display, password){
   const canon = canonFromDisplay(display);
   if (!password || password.length < 6) throw new Error("Contraseña mínima de 6 caracteres.");
   const email = emailFor(canon);
 
-  // si ya existe cuenta con ese email, error controlado
   const methods = await fetchSignInMethodsForEmail(auth, email);
   if (methods.includes("password")) throw new Error("Ese usuario ya existe. Inicia sesión.");
 
-  // crea cuenta
   const cred = await createUserWithEmailAndPassword(auth, email, password);
   const uid = cred.user.uid;
 
-  // reserva username
   const unameRef = ref(db, `usernames/${canon}`);
   const txn = await runTransaction(unameRef, curr=>{
     if (curr === null) return { uid, display: display.trim() };
     if (curr.uid === uid) return { ...curr, display: display.trim() };
-    return; // ocupado por otro
+    return; // ocupado
   });
   if (!txn.committed && txn.snapshot.exists() && txn.snapshot.val().uid !== uid) {
     await signOut(auth).catch(()=>{});
     throw new Error("Ese nombre ya está en uso.");
   }
 
-  // perfil
   const profRef = ref(db, `profiles/${canon}`);
   await set(profRef, { display: display.trim(), score: 0, created: Date.now() });
 
-  // map uid -> canon
   await set(ref(db, `accounts/${uid}`), { canon, display: display.trim() });
 
   setLocalCanon(canon);
@@ -89,7 +83,6 @@ export async function loginUsername(display, password){
   const cred = await signInWithEmailAndPassword(auth, email, password);
   const uid = cred.user.uid;
 
-  // verifica que el username pertenece a este uid
   const owner = await get(ref(db, `usernames/${canon}/uid`));
   if (!owner.exists() || owner.val() !== uid){
     await signOut(auth).catch(()=>{});
@@ -99,7 +92,7 @@ export async function loginUsername(display, password){
   return { uid, canon };
 }
 
-// compat: intento de crear o entrar
+/* compat: botón antiguo si existiera */
 export async function createOrLoginUsername(display){
   const pass = (typeof document!=='undefined' && document.getElementById('passInput')?.value) || '';
   const canon = canonFromDisplay(display);
@@ -125,14 +118,25 @@ export async function getCurrentProfile(){
   return snap.exists() ? { canon, ...snap.val() } : null;
 }
 
-/* ===== leaderboard ===== */
-export async function loadTop(n=10){
-  const q = query(ref(db, "profiles"), orderByChild("score"), limitToLast(n));
-  const snap = await get(q);
+/* ===== leaderboard con fallback ===== */
+export async function loadTop(n = 10) {
+  try {
+    const q = query(ref(db, "profiles"), orderByChild("score"), limitToLast(n));
+    const snap = await get(q);
+    if (snap.exists()) {
+      const rows = [];
+      snap.forEach(ch => { const v = ch.val(); rows.push({ display: v.display, score: v.score || 0 }); });
+      rows.sort((a,b)=> b.score - a.score);
+      return rows;
+    }
+  } catch (e) {
+    console.warn('loadTop index query failed, falling back:', e);
+  }
+  const all = await get(ref(db, "profiles"));
   const rows = [];
-  snap.forEach(ch => { const v = ch.val(); rows.push({ display: v.display, score: v.score||0 }); });
+  all.forEach(ch => { const v = ch.val(); rows.push({ display: v.display, score: v.score || 0 }); });
   rows.sort((a,b)=> b.score - a.score);
-  return rows;
+  return rows.slice(0, n);
 }
 
 /* ===== bloqueo diario (UTC) ===== */
@@ -154,23 +158,33 @@ export async function getCooldownMs(){
   const snap = await get(ref(db, `plays/${canon}/${todayKeyUTC()}`));
   return snap.exists() ? msUntilNextUtcMidnight() : 0;
 }
+
+/* ===== suma diaria: devuelve el score NUEVO desde BD ===== */
 export async function addScoreDaily(delta){
   const canon = getCurrentCanon();
   if (!canon) throw new Error('No hay usuario activo.');
 
   const playRef = ref(db, `plays/${canon}/${todayKeyUTC()}`);
   const already = await get(playRef);
-  if (already.exists()) throw new Error('⏳ Ya jugaste hoy. Vuelve mañana.');
+  if (already.exists()) throw new Error(' Ya jugaste hoy. Vuelve mañana.');
 
-  // marca el día
-  await set(playRef, serverTimestamp());
+  await set(playRef, Date.now());
 
-  // suma puntos
   const profRef = ref(db, `profiles/${canon}`);
-  await runTransaction(profRef, curr=>{
+  let newScore = 0;
+  const res = await runTransaction(profRef, curr=>{
     if (!curr) return curr;
-    return { ...curr, score: (curr.score||0) + (Number(delta)||0) };
+    const s = (curr.score || 0) + (Number(delta) || 0);
+    return { ...curr, score: s };
   });
+
+  if (res.committed && res.snapshot.exists()) {
+    newScore = Number(res.snapshot.val().score || 0);
+  } else {
+    const snap = await get(profRef);
+    newScore = Number((snap.val()?.score) || 0);
+  }
+  return newScore;
 }
 
 /* ===== salir ===== */

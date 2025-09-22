@@ -1,15 +1,14 @@
 // src/game.js
 import { NODES, ANSWERS } from './config/levels.js';
 import {
-  ensureAuth, getCurrentProfile, createOrLoginUsername,
-  addScoreDaily, loadTop, getCooldownMs
+  ensureAuth, getCurrentProfile, addScoreDaily, loadTop, getCooldownMs
 } from './firebase.js';
-import { els, showMsg, renderEndpoint, openModal, closeModal, renderBoard } from './ui.js';
+import { els, showMsg, renderEndpoint, renderBoard } from './ui.js';
 
 let edgeIndex = 0;
 let attemptsThisStep = 0;
 let sessionPoints = 0;   // puntos de esta cadena (local)
-let baseScore = 0;       // puntos de BD al entrar
+let baseScore = 0;       // puntos de BD
 
 const normalize = (s)=> (s||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 const correctPoints = ()=> attemptsThisStep === 0 ? 100 : 50;
@@ -30,7 +29,7 @@ function loadStep(){
 async function refreshProfileUI(){
   const p = await getCurrentProfile();
   if (p){
-    if (els.userTag) els.userTag.textContent = p.display;
+    els.userTag && (els.userTag.textContent = p.display);
     baseScore = Number(p.score||0);
     updateHeaderScoreUI();
   }
@@ -54,7 +53,7 @@ async function enforceDailyLock(){
     const h = Math.floor(remaining/3600000);
     const m = Math.floor((remaining%3600000)/60000);
     const s = Math.floor((remaining%60000)/1000);
-    showMsg(`⏳ Ya jugaste hoy. Vuelve en ${h}h ${m}m ${s}s`, 'warn');
+    showMsg(` Ya jugaste hoy. Vuelve en ${h}h ${m}m ${s}s`, 'warn');
   }
   return locked;
 }
@@ -70,7 +69,7 @@ async function check(){
 
   const pts = correctPoints();
   sessionPoints += pts;
-  updateHeaderScoreUI(); // 🔹 sube marcador ya
+  updateHeaderScoreUI();
   showMsg(`¡Correcto! +${pts} puntos 🎉`, 'ok');
 
   if (edgeIndex < NODES.length - 2){
@@ -78,19 +77,20 @@ async function check(){
     return;
   }
 
-  // fin de cadena -> persistir y bloquear el día
   try{
-    await addScoreDaily(sessionPoints);
-    baseScore += sessionPoints;
+    const newScore = await addScoreDaily(sessionPoints); // score real BD
+    baseScore = newScore;
     sessionPoints = 0;
     updateHeaderScoreUI();
+    // pequeño delay para evitar cachés intermedias en lecturas consecutivas
+    await new Promise(r=>setTimeout(r, 120));
     await refreshBoard();
     await enforceDailyLock();
-    showMsg('🎉 ¡Cadena completa!', 'ok');
+    showMsg(' ¡Cadena completa!', 'ok');
   }catch(e){
     const msg = String(e?.message || e);
     if (msg.includes('Ya jugaste hoy')){
-      showMsg('⏳ Ya jugaste hoy. Vuelve mañana.', 'warn');
+      showMsg(' Ya jugaste hoy. Vuelve mañana.', 'warn');
       await enforceDailyLock();
     } else {
       showMsg('Error al guardar la puntuación.', 'bad');
@@ -100,24 +100,33 @@ async function check(){
   endGame();
 }
 
+// Mostrar solución y avanzar
 async function reveal(){
   const ans = (ANSWERS[edgeIndex]||[])[0] || '';
-  if (els.middleInput) els.middleInput.value = ans;
+  els.middleInput && (els.middleInput.value = ans);
 
-  if (edgeIndex < NODES.length-2){
-    showMsg('Solución mostrada (0 puntos).','warn');
+  // Si NO es el último paso: revelar este paso (vale 0) y pasar al siguiente.
+  if (edgeIndex < NODES.length - 2){
+    showMsg('Solución mostrada (0 puntos en este paso).','warn');
     setTimeout(()=>{ edgeIndex++; loadStep(); }, 900);
     return;
   }
 
+  // Si ES el último paso:
+  // Guardamos los puntos acumulados en toda la cadena (sessionPoints), SIN sumar nada por este último paso revelado.
   try{
-    await addScoreDaily(0);
+    const newScore = await addScoreDaily(sessionPoints);  //  antes ponía 0
+    baseScore = newScore;
+    sessionPoints = 0;
+    updateHeaderScoreUI();
+    await new Promise(r=>setTimeout(r, 120));
+    await refreshBoard();
     await enforceDailyLock();
-    showMsg('Solución mostrada (0 puntos). 🎉 Cadena completa','warn');
+    showMsg('Solución mostrada (0 en este paso). Puntos anteriores guardados y cadena completa','warn');
   }catch(e){
     const msg = String(e?.message || e);
     if (msg.includes('Ya jugaste hoy')){
-      showMsg('⏳ Ya jugaste hoy. Vuelve mañana.', 'warn');
+      showMsg(' Ya jugaste hoy. Vuelve mañana.', 'warn');
       await enforceDailyLock();
     } else {
       showMsg('Error al registrar la partida.', 'bad');
@@ -128,11 +137,12 @@ async function reveal(){
 }
 
 function endGame(){
-  if (els.gameRow) els.gameRow.style.display='none';
-  if (els.checkBtn) els.checkBtn.style.display='none';
-  if (els.revealBtn) els.revealBtn.style.display='none';
+  els.gameRow   && (els.gameRow.style.display='none');
+  els.checkBtn  && (els.checkBtn.style.display='none');
+  els.revealBtn && (els.revealBtn.style.display='none');
 }
 
+// APIs para main.js
 export async function startAfterAuth(){
   await refreshProfileUI();
   await refreshBoard();
@@ -143,20 +153,11 @@ export async function startAfterAuth(){
 }
 
 export async function initGame(){
-  if (els.checkBtn)  els.checkBtn.onclick  = ()=>{ check().catch(err=>showMsg(err.message,'bad')); };
-  if (els.revealBtn) els.revealBtn.onclick = ()=>{ reveal().catch(err=>showMsg(err.message,'bad')); };
+  els.checkBtn  && (els.checkBtn.onclick  = ()=>{ check().catch(err=>showMsg(err.message,'bad')); });
+  els.revealBtn && (els.revealBtn.onclick = ()=>{ reveal().catch(err=>showMsg(err.message,'bad')); });
   els.middleInput && els.middleInput.addEventListener('keydown', e=>{ if(e.key==='Enter') check(); });
-
-  // compat botón oculto del modal
-  if (els.createUserBtn) els.createUserBtn.onclick = async ()=>{
-    try{
-      await createOrLoginUsername(els.userInput?.value);
-      closeModal();
-      await startAfterAuth();
-    }catch(e){ if (els.userError) els.userError.textContent = e.message || 'Error creando usuario'; }
-  };
 
   await ensureAuth();
   const p = await getCurrentProfile();
-  if (p) await startAfterAuth(); // si ya hay sesión
+  if (p) await startAfterAuth(); // si ya estaba logueado
 }

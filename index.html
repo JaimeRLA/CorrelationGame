@@ -3,34 +3,34 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Correlate! — Juego de asociaciones</title>
-
-  <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg">
-  <meta name="theme-color" content="#0b0f14">
-
+  <title>Correlate! — Association Game</title>
+  <head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Correlate! — Cadena</title>
+  <!-- AdSense: incluye solo una vez -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9214440320012565"
+          crossorigin="anonymous"></script>
   <style>
     :root{--bg:#0b0f14;--text:#e9eef7;--accent:#4f9cff;--muted:#a7b0be;--ok:#2ecc71;--bad:#ff5a5a;--warn:#f0c94b}
     *{box-sizing:border-box}
     body{margin:0;font-family:system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;align-items:stretch;min-height:100vh;text-align:center}
-
     header{position:sticky;top:0;left:0;right:0;padding:16px 20px;background:rgba(11,15,20,.6);backdrop-filter:blur(8px);border-bottom:1px solid #1a2330;text-align:initial;z-index:10;width:100%}
     .header-inner{display:flex;align-items:center;justify-content:space-between;width:100%;margin:0}
-    .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.3rem}
-    .brand .logo{display:block;height:36px;width:auto}
-    .userbar{display:flex;gap:12px;align-items:center;font-size:.95rem;color:var(--muted)}
+    .brand{font-weight:800;font-size:1.3rem;display:flex;align-items:center;gap:8px}
+    .brand img.logo{height:40px;vertical-align:middle}
+    .userbar{display:flex;gap:30px;align-items:center;font-size:.95rem;color:var(--muted)}
     .pill{border:1px solid #2a3648;border-radius:999px;padding:6px 10px}
-    .secondary{background:#162232;color:var(--text);border:1px solid #29384f}
-    .tiny{padding:8px 12px;font-size:.9rem}
-
+    .btn{all:unset;cursor:pointer;background:var(--accent);color:#0b0f14;padding:10px 14px;border-radius:10px;font-weight:700}
+    .btn.secondary{background:#162232;color:var(--text);border:1px solid #29384f}
     main{width:min(980px,100%);margin:0 auto;padding:36px 16px}
-    h1{margin:0 0 8px}
+    h1{margin:0 0 8px;
+    font-size: 48px;}
     .subtitle{color:var(--muted);margin-bottom:14px}
     .row{display:flex;align-items:center;justify-content:center;gap:24px;margin:24px 0;flex-wrap:wrap}
     .box{min-width:220px;min-height:150px;padding:20px;border-radius:16px;border:3px solid #2a3648;display:flex;align-items:center;justify-content:center;text-align:center;font-size:2rem}
     .box strong{font-size:2rem}
     .box input{all:unset;width:100%;height:100%;text-align:center;font-size:2rem}
-
-    button{all:unset;cursor:pointer;background:var(--accent);color:#0b0f14;padding:14px 24px;border-radius:12px;font-weight:700;margin:8px;font-size:1.05rem}
     button[disabled]{opacity:.6;cursor:not-allowed}
     .stack{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:center}
     .msg{margin-top:16px;font-size:1.1rem;min-height:1.4em}
@@ -38,55 +38,35 @@
     .board{margin-top:28px;font-size:.95rem;color:var(--muted)}
     .board table{width:100%;border-collapse:collapse;margin-top:8px}
     .board th,.board td{padding:8px;border-bottom:1px solid #1a2330;text-align:left}
-
+    /* Modal */
     .modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;padding:20px}
     .card{background:#10161d;border:1px solid #1a2330;border-radius:16px;max-width:520px;width:100%;padding:20px;text-align:left}
     .card h2{margin:0 0 6px;font-size:1.4rem}
     .field{display:flex;gap:10px;margin-top:10px}
-    .field input{flex:1;all:unset;background:#0f1620;border:1px solid #243246;border-radius:10px;padding:12px 14px;font-size:1rem;color:var(--text)}
+    .field input{flex:1;all:unset;background:#0f1620;border:1px solid #243246;border-radius:10px;padding:12px 14px;font-size:1rem}
     .helper{color:var(--muted);font-size:.9rem;margin-top:6px}
-
-    /* Responsive */
-    h1{font-size:clamp(22px, 3.8vw, 32px)}
-    .subtitle{font-size:clamp(14px, 2.6vw, 16px)}
-    .box strong,.box input{font-size:clamp(18px, 5.2vw, 32px)}
-    button{font-size:clamp(14px, 2.8vw, 17px);padding:12px 20px}
-    @media (max-width:768px){
-      .brand .logo{height:32px}
-      .row{gap:16px;margin:18px 0}
-      .box{min-width:180px;min-height:120px;padding:16px}
-    }
-    @media (max-width:480px){
-      header{padding:12px 14px}
-      .brand .logo{height:28px}
-      .userbar{gap:8px}
-      .pill{padding:4px 8px}
-      .row{gap:12px;margin:14px 0}
-      .box{min-width:140px;min-height:100px;padding:12px;border-width:2px}
-      .stack{gap:6px}
-      .stack button{min-width:46%;padding:12px}
-      #middleInput{padding:6px 2px}
-    }
   </style>
 </head>
 <body>
   <header>
     <div class="header-inner">
       <div class="brand">
-        <img src="./assets/logo.svg" alt="Correlate!" class="logo">
+        <img src="assets/logo.svg" alt="Correlate! Logo" class="logo" />
       </div>
       <div class="userbar">
         <span class="pill" id="userTag">Sin usuario</span>
         <span class="pill">⭐ <span id="scoreTag">0</span></span>
-        <button class="secondary tiny" id="loginHeaderBtn">Iniciar sesión</button>
-        <button class="tiny" id="registerHeaderBtn">Crear usuario</button>
-        <button class="secondary tiny" id="switchBtn" style="display:none">Cambiar usuario</button>
+        <!-- Nuevo: botones explícitos -->
+        <button class="btn secondary" id="btnLogin">Iniciar sesión</button>
+        <button class="btn" id="btnRegister">Crear usuario</button>
+        <!-- Conservamos el antiguo switchBtn por compatibilidad (no se usa) -->
+        <button class="btn secondary" id="switchBtn" style="display:none">Cambiar usuario</button>
       </div>
     </div>
   </header>
 
   <main>
-    <h1>Juego de Asociaciones</h1>
+    <h1>Correlate!</h1>
     <div class="subtitle">Escribe una palabra en la caja central que conecte el inicio con el fin.</div>
 
     <div class="row" id="gameRow">
@@ -96,8 +76,8 @@
     </div>
 
     <div class="stack">
-      <button id="checkBtn">Comprobar</button>
-      <button id="revealBtn" class="secondary">Mostrar solución</button>
+      <button class="btn" id="checkBtn">Comprobar</button>
+      <button class="btn secondary" id="revealBtn">Mostrar solución</button>
     </div>
 
     <div class="msg" id="message"></div>
@@ -111,24 +91,19 @@
     </section>
   </main>
 
-  <!-- Modal de acceso -->
-  <div class="modal" id="userModal" style="display:none">
+  <!-- Modal Auth -->
+  <div class="modal" id="userModal">
     <div class="card">
-      <h2 id="authModeTitle">Acceso</h2>
+      <h2 id="modeTitle">Iniciar sesión</h2>
       <div class="field" style="margin-top:10px">
-        <input id="userInput" placeholder="Tu nombre de usuario" maxlength="24" autocomplete="username" />
+        <input id="userInput" placeholder="Tu nombre de usuario" maxlength="24" />
       </div>
       <div class="field">
-        <input id="passInput" type="password" placeholder="Contraseña (mín. 6)" minlength="6" autocomplete="current-password" />
-      </div>
-      <div class="stack" style="margin-top:8px">
-        <button id="loginBtn">Iniciar sesión</button>
-        <button id="registerBtn" class="secondary">Crear cuenta</button>
-        <!-- compat con game.js antiguo -->
-        <button id="createUserBtn" style="display:none">Entrar</button>
+        <input id="passInput" type="password" placeholder="Contraseña (mín. 6)" minlength="6" />
+        <button class="btn" id="authSubmitBtn">Entrar</button>
       </div>
       <div id="userError" class="msg bad" style="min-height:24px"></div>
-      <div class="helper" id="authHelper">“Iniciar sesión” exige que el usuario exista y la contraseña sea correcta.</div>
+      <div class="helper" id="modeHelper">¿No tienes cuenta? Elige “Crear usuario”.</div>
     </div>
   </div>
 
